@@ -10,3 +10,5 @@ target_include_directories(CrsfLib
 )
 
 target_compile_features(CrsfLib PUBLIC cxx_std_20)
+
+target_link_libraries(CrsfLib PUBLIC PubSubLib)

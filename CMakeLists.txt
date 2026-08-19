@@ -77,6 +77,7 @@ list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES ob)
 
 add_subdirectory(PubSubLib)
 add_subdirectory(KalmanLib)
+add_subdirectory(CrsfLib)
 add_subdirectory(FlightControllerLib)
 
 # Add linked libraries
@@ -84,6 +85,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     PubSubLib
     KalmanLib
+    CrsfLib
     FlightControllerLib
     # Add user defined libraries
 )
