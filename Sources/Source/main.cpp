@@ -1,5 +1,8 @@
 #include "main.h"
 #include "cmsis_os.h"
+#include "CrsfLink.h"
+#include <ThrustController.h>
+#include <SurfaceController.h>
 #include "SensorSamplingNode.h"
 #include "SensorFusionNode.h"
 #include "Mpu6050.h"
@@ -9,13 +12,35 @@
 #include "OsdModule.h"
 #include "OsdHorizonNode.h"
 
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim3;
 extern I2C_HandleTypeDef hi2c2;
-extern UART_HandleTypeDef huart2;
+
+using namespace std::chrono_literals;
 
 extern "C" void main_cpp()
 {
+    auto leftAileronControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_1, 500us, 2500us);
+    auto rightAileronControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_2, 500us, 2500us);
+    auto leftRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_3, 1000us, 2000us);
+    auto rightRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_4, 1000us, 2000us);
+
+    auto thrust = std::make_unique<ThrustController>(htim3, TIM_CHANNEL_1);
+
+    auto leftAileron = std::make_unique<SurfaceController>(std::move(leftAileronControl));
+    auto rightAileron = std::make_unique<SurfaceController>(std::move(rightAileronControl));
+    auto leftRuddervator = std::make_unique<SurfaceController>(std::move(leftRuddervatorControl));
+    auto rightRuddervator = std::make_unique<SurfaceController>(std::move(rightRuddervatorControl));
+    auto model = std::make_shared<PlaneModel>(
+        std::move(leftAileron),
+        std::move(rightAileron),
+        std::move(leftRuddervator),
+        std::move(rightRuddervator),
+        std::move(thrust)
+    );
+
     auto bus = std::make_unique<I2cBus>(hi2c2);
     auto mpuSensor = bus->CreateSensor<Mpu6050>();
     mpuSensor->Start();
@@ -59,6 +84,7 @@ extern "C" void main_cpp()
     Connect(fusion, *osdHorizonNode);
     fusion.Start();
 
+    CrsfLink link(huart1, model);
     while (true)
     {
         osDelay(1);
