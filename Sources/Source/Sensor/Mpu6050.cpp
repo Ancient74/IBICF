@@ -18,11 +18,11 @@ namespace
     constexpr uint8_t DLPF_VALUE = 0;
     constexpr uint16_t GYRO_SAMPLING_RATE = DLPF_VALUE > 0 ? 1000 : 8000;
 
-    constexpr float ACCELEROMETER_BIAS[3] = { 0.0f, 0.0f, 0.0f };
+    constexpr float ACCELEROMETER_BIAS[3] = { 1.926794f, -10.027902f, 3.518213f };
     constexpr float ACCELEROMETER_MATRIX[3][3] = {
-        { 1.0f, 0.0f, 0.0f },
-        { 0.0f, 1.0f, 0.0f },
-        { 0.0f, 0.0f, 1.0f },
+        { 0.989325f, 0.007474f, 0.009166f },
+        { 0.007474f, 1.010914f, 0.010260f },
+        { 0.009166f, 0.010260f, 0.987679f },
     };
 
     constexpr float DEG_TO_RAD = 3.14159265358979323846f / 180.0f;
