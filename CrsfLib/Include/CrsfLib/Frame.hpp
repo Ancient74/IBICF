@@ -187,4 +187,43 @@ namespace CrsfLib
         std::span<const uint8_t> m_data;
     };
 
+    struct ParamDeviceInformationFrame
+    {
+        static constexpr FrameType type = FrameType::ParamDeviceInformation;
+
+        const char* deviceName;
+        uint32_t serialNumber;
+        uint32_t hardwareId;
+        uint32_t firmwareId;
+        uint8_t parametersTotal;
+        uint8_t parameterVersionNumber;
+    };
+    static_assert(std::is_aggregate_v<ParamDeviceInformationFrame>);
+
+    struct LinkStatisticsFrame
+    {
+        static constexpr FrameType type = FrameType::LinkStatistics;
+
+        uint8_t upRssiAnt1;       // Uplink RSSI Antenna 1 (dBm * -1)
+        uint8_t upRssiAnt2;       // Uplink RSSI Antenna 2 (dBm * -1)
+        uint8_t upLinkQuality;    // Uplink Package success rate / Link quality (%)
+        int8_t upSnr;             // Uplink SNR (dB)
+        uint8_t activeAntenna;    // number of currently best antenna
+        uint8_t rfProfile;        // enum {4fps = 0 , 50fps, 150fps}
+        uint8_t upRfPower;        // enum {0mW = 0, 10mW, 25mW, 100mW,
+                                  // 500mW, 1000mW, 2000mW, 250mW, 50mW}
+        uint8_t downRssi;         // Downlink RSSI (dBm * -1)
+        uint8_t downLinkQuality;  // Downlink Package success rate / Link quality (%)
+        int8_t downSnr;           // Downlink SNR (dB)
+    };
+    static_assert(std::is_aggregate_v<LinkStatisticsFrame>);
+
+    struct RcChannelsPackedFrame
+    {
+        static constexpr FrameType type = FrameType::RcChannelsPacked;
+
+        std::array<uint16_t, 16> m_channels;
+    };
+    static_assert(std::is_aggregate_v<RcChannelsPackedFrame>);
+
 }
