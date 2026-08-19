@@ -76,10 +76,12 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES ob)
 
 add_subdirectory(PubSubLib)
+add_subdirectory(KalmanLib)
 
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     PubSubLib
+    KalmanLib
     # Add user defined libraries
 )
