@@ -66,6 +66,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Sources/Include
     Sources/Include/Sensor
     Sources/Include/Crsf
+    Sources/Include/Osd
 )
 
 # Add project symbols (macros)
