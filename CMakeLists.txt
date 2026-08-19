@@ -65,6 +65,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     Sources/Include
     Sources/Include/Sensor
+    Sources/Include/Crsf
 )
 
 # Add project symbols (macros)
