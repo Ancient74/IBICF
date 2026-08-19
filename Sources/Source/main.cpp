@@ -6,8 +6,13 @@
 #include "Qmc5883L.h"
 #include <PubSubLib/Node.hpp>
 #include "EmaFilterNode.h"
+#include "OsdModule.h"
+#include "OsdHorizonNode.h"
 
+extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim3;
 extern I2C_HandleTypeDef hi2c2;
+extern UART_HandleTypeDef huart2;
 
 extern "C" void main_cpp()
 {
@@ -46,6 +51,12 @@ extern "C" void main_cpp()
     }
     mpuNode->Start();
 
+    auto osdReader = std::make_shared<OsdResponseReader>();
+    auto osdUart = std::make_unique<Uart>(huart2, osdReader);
+    auto osdModule = std::make_unique<OsdModule>(std::move(osdUart), osdReader);
+    auto osdController = std::make_shared<OsdController>(std::move(osdModule));
+    auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController, 20);
+    Connect(fusion, *osdHorizonNode);
     fusion.Start();
 
     while (true)
