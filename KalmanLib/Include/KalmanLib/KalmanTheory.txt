@@ -1,0 +1,399 @@
+x = [ theta, phi ] - our state
+
+theta = roll
+phi = pitch
+
+A = [ 0,  0 ]
+    [ 0,  0 ]
+
+u = [ p, q, r ] - angular rates from gyro
+measurements from accelerometer live in another matrix at second part of equation
+so as for this part we have
+
+assuming body rate mapping
+B = [ b11(theta, phi),  b12(theta, phi), b13(theta, phi) ]
+    [ b21(theta, phi),  b22(theta, phi), b23(theta, phi) ]
+= B(theta, phi)
+
+dx/dt = A*x + B(theta, phi)*u
+
+dtheta/dt = 0*theta + b11(theta, phi)*p + b12(theta, phi)*q + b13(theta, phi)*r
+dphi/dt = 0*phi + b21(theta, phi)*p + b22(theta, phi)*q + b23(theta, phi)*r
+
+and theta, phi is exactly out state vector so B(theta, phi) = B(x)
+
+model
+y = C*x + D*u + v
+
+v is noise
+v = [ theta_noise, phi_noise ]
+
+C = [ 1, 0 ]
+    [ 0, 1 ]
+
+D = [ 0, 0 ]
+    [ 0, 0 ]
+
+these are predictions of what accelerometer is going to be
+
+y = C*x_pred + D*u
+
+so
+
+y[0] = 1*theta_pred
+y[1] = 1*phi_pred
+
+theta_meas = atan2(ay, az)
+phi_meas = atan2(-ax, sqrt(ay^2 + az^2))
+
+error[0] = theta_meas - y[0] = theta_meas - theta_pred
+error[1] = phi_meas - y[1] = phi_meas - phi_pred
+
+this is an update onto next state
+
+x_next = x_pred + K*error
+
+define covariance matrix for noise
+this is basically matrix of variances
+noise is independent from each other so
+
+R = [ theta_sigma^2, 0 ]
+    [ 0,   phi_sigma^2 ]
+
+theta_sigma^2 and phi_sigma^2 are computed
+
+theta_sigma^2 = 1/(N - 1) * sum(1, N, (theta_meas_i - theta_mean)^2)
+
+R is a filter's parameter
+
+now lets define covariance matrix of state measurements
+P = [ Ptt, Ptp ]
+    [ Ppt, Ppp ]
+
+lets predict next state
+x_pred = x + x_dot*dt
+where x_dot = dx/dt = A*x + B(theta, phi)*u
+A = 0
+so
+x_pred = x + B(theta, phi)*u*dt
+f(x, u) = x + B(theta, phi)*u*dt
+
+P_pred = F * P * F^T + Q
+where F = df/dx (partial)
+F = I + something; Here I want to point at term x; partial derivative of x by dx is identity matrix;
+and this something equals to dB(x)/dx * u * dt;B(x) * u = [b11(x)*p + b12(x)*q + b13(x)*r]
+                                                          [b21(x)*p + b22(x)*q + b23(x)*r]
+= g(x)
+then dg(x)/dx = J
+so
+F = I + J*(x) * dt
+where J(x) = [ dg1(x)/d_theta, dg1(x)/d_phi ]
+             [ dg2(x)/d_theta, dg2(x)/d_phi ]
+
+g1(x) = [b11(x)*p + b12(x)*q + b13(x)*r]
+g2(x) = [b21(x)*p + b22(x)*q + b23(x)*r]
+
+remember P_pred = F * P * F^T + Q
+
+Q is same as R... R is for accelerometer's noisy measurements
+and Q is for uncertanty in predictions
+
+we can get Q by measuring gyroscope and integrating using B matrix
+N - is covariance matrix of p,q,r noisy measurements
+N = [ p_noise^2, 0, 0 ]
+    [ 0, q_noise^2, 0 ]
+    [ 0, 0, r_noise^2 ]
+
+then Q = B * N * B^T * (dt)^2
+
+soo
+
+P_pred = carry old doubt forward + add new uncertanty from new input
+
+next we need to calculate error spread
+S = C*P_pred*C^T + R
+with C = I
+S = P_pred + R
+
+and K = P_pred*C^T*S^(-1)
+
+in scalar form and C = I
+K = P_pred / (P_pred + R)
+
+if P_pred > R : doubtful prediction - trust sensor more
+if P_pred < R : sensor is noisy - trust prediction more
+
+in our case since noise R is independent
+K_theta = P_pred_tt / (P_pred_tt + theta_sigma^2)
+same for phi
+
+next step is to shrink uncertanty
+
+P_next = (I - K*C)*P_pred
+
+--------------------------------------------
+predict (time update):
+  G(x)   = B(x)*u
+  x_pred = x + G(x)*dt              # state prediction, f(x,u)
+  J(x)   = dG(x)/dx                 # Jacobian (numeric or analytic)
+  F      = I + J*dt                 # state-transition Jacobian
+  Q      = B * N * B^T * dt^2       # process noise
+  P_pred = F * P * F^T + Q          # covariance prediction
+
+update (measurement update):
+  error  = x - C*x_pred             # innovation
+  S      = C * P_pred * C^T + R     # innovation covariance
+  K      = P_pred * C^T * S^(-1)    # gain
+  x_next = x_pred + K*error         # state correction
+  P_next = (I - K*C) * P_pred       # covariance correction
+--------------------------------------------
+
+now we want to get rid of Euler angles and transition to quaternions
+
+quaternion lives on a unit sphere and any additions destroy it
+so we need to split quaternion math with step math
+For that we'd use MEKF - multiplicative extended kalman filter
+our state x is now error, small rotations;
+B matrix in MEKF is identity since state is propagated by quaternion multiplications
+
+in general
+dx/dt = A*x + B*u
+in MEKF x is error; and there is no u to drive that error so
+dx/dt = A*x
+x_pred = x + dx/dt * dt
+f(x) = x + A*x*dt
+F(x) = I + A*I*dt
+
+to define A we need to define error
+    small rotation is
+    q_new = q_curr (*) δq
+    then
+    δq = q_curr* (*) q_new
+
+    rotation along axis w is defined as
+    q(w, theta) = [ cos(theta/2), w*sin(theta/2) ]
+    for small theta we can approximate
+    q becomes δq for small rotations
+    δq = [1, w*theta / 2]
+    w*theta = δθ
+    δq = [ 1, δθ/2 ]
+    q* (*) q_new = [ 1, δθ/2 ]
+
+    in our case
+    δq is an error quaternion and the error is δθ
+    1/2 is omitted because of quaternion property of storing half rotation
+    δθ is rotation error
+
+recall
+dx/dt = A*x is same as
+δθ_dot = A*δθ
+
+at this point we have 2 static equations
+δq = q_curr* (*) q_new
+δq = [ 1, δθ/2 ]
+
+to extract dynamics (this is what A describes) we need to differentiate
+δq_dot = [ 0, δθ_dot*1/2 ] (1)
+
+dq/dt = 1/2 * q (*) w // general rule
+
+δq_dot = q_curr*_dot (*) q_new + q_curr* (*) q_new_dot;
+
+conjugate rule:
+(A(*)B)* = B*(*)A*
+w_curr* = -w_curr since scalar of quaternion is 0 (w_curr is vector (axis of rotation))
+q_curr*_dot =  (1/2 * q_curr (*) w_curr)* = 1/2 * w_curr* (*) q_curr* = -1/2 * w_curr (*) q_curr*
+q_new_dot = 1/2 * q_new (*) w_new
+
+δq_dot = -1/2 * w_curr (*) q_curr* (*) q_new + q_curr* (*) 1/2 * q_new (*) w_new;
+
+magic is that we have first equation
+δq = q_curr* (*) q_new
+and now we can substitude
+δq_dot = -1/2 * w_curr (*) δq + 1/2 * δq (*) w_new
+δq_dot = 1/2 (δq (*) w_new - w_curr (*) δq) (2)
+
+and now (1) = (2)
+
+[ 0, δθ_dot*1/2 ] = 1/2 (δq (*) w_new - w_curr (*) δq); multiply both by 1/2
+[ 0, δθ_dot ] = δq (*) w_new - w_curr (*) δq;
+
+recall that
+δq = [ 1, δθ/2 ]
+
+[ 0, δθ_dot ] = [ 1, δθ/2 ] (*) w_new - w_curr (*) [ 1, δθ/2 ]
+if we perform (*)
+[ 0, δθ_dot ] = w_new + 1/2 * δθ(x)w_new - (w_curr + w_curr(x)δθ * 1/2); where (x) cross product
+extract δθ_dot
+δθ_dot = w_new + 1/2 * δθ(x)w_new - w_curr - w_curr(x)δθ * 1/2
+rearrange
+δθ_dot = w_new - w_curr + 1/2(δθ(x)w_new - w_curr(x)δθ)
+w_new - w_curr is a noise term;
+noise is small so we can assume w_new = w_curr = w
+
+by anticommutativity rule
+-(a(x)b)=b(x)a
+
+1/2(δθ(x)w - w(x)δθ) = 1/2(δθ(x)w + δθ(x)w) = δθ(x)w
+
+soo
+
+δθ_dot = δθ(x)w + noise
+δθ_dot = -w(x)δθ --- this is almost the same as x_dot = A*x equation
+
+now we want to rearange this in a way that instead of cross product we get matrix by vector multiplication
+w is (w_x, w_y, w_z) vector and δθ is (δθ_x, δθ_y, δθ_z) vector
+cross product is (w_y*δθ_z - w_z*δθ_y, w_z*δθ_x - w_x*δθ_z, w_x*δθ_y - w_y*δθ_x)
+lets express it as matrix
+[a11, a12, a13] [δθ_x] = [w_y*δθ_z - w_z*δθ_y]
+[a21, a22, a23] [δθ_y] = [w_z*δθ_x - w_x*δθ_z]
+[a31, a32, a33] [δθ_z] = [w_x*δθ_y - w_y*δθ_x]
+
+a11*δθ_x + a12*δθ_y + a13*δθ_z = w_y*δθ_z - w_z*δθ_y
+a21*δθ_x + a22*δθ_y + a23*δθ_z = w_z*δθ_x - w_x*δθ_z
+a31*δθ_x + a32*δθ_y + a33*δθ_z = w_x*δθ_y - w_y*δθ_x
+
+looking at row 1 we can see that a11 = 0; a12 = -w_z; a13 = w_y
+looking at row 2 we can see that a21 = w_z; a22 = 0; a23 = -w_x
+looking at row 3 we can see that a31 = -w_y; a32 = w_x; a33 = 0
+
+[0, -w_z, w_y]
+[w_z, 0, -w_x]
+[-w_y, w_x, 0]
+
+and with this and with that δθ_dot = -w(x)δθ minus sign our matrix A equals to
+[0, w_z, -w_y]
+[-w_z, 0, w_x]
+[w_y, -w_x, 0]
+
+
+continuing from last point we had
+F(x) = I + A*I*dt = I + A*dt
+Q = N*dt^2
+q_pred = q (*) dq
+
+where δq is FromAxisAngle(omega, mag(omega)*dt)
+
+FromAxisAngle is basically this
+δq = [ 1, δθ/2 ]
+but without linearization
+δq = [ cos(θ/2), omega*sin(θ/2) ]
+
+Ppred = F * P * F^T + Q same as before
+
+
+so full predict step is:
+F(x) = I + A*dt
+Q = N*dt^2
+q_pred = q (*) dq
+Ppred = F * P * F^T + Q same as before
+δθ = 0
+
+update step:
+provide g = [0,0,1] once
+get rotation matrix out of predicted quaternion
+R = q_pred.ToRotationMatrix()
+h = R^T * g - this is basically prediction of what accelerometer would return
+which means we can now easily get an error calculation (innovation)
+error = acc_measured - h
+now we need to update covariance of innovation
+Previously we did it like this: C * P_pred * C^T + R
+but now C is not a constant, its a function of measurement h
+which means we need a Jacobian matrix H to get it right
+H = dh/d(δθ) partial
+so for every axis i_x[1,0,0] i_y[0,1,0] i_z[0,0,1]
+we are going to calculate numerically Jacobian rows
+dq_i = FromAxisAngle(i_j, eps)
+R_i = q_pred (*) dq_i
+h_i = R_i^T * g
+H[i] = (h_i - h) / eps
+
+Lets derive Jacobian analytically:
+H = dh/d(δθ)
+h = R^T * g
+R is a matrix/function of q so
+h_pert = R(q (*) dq)^T * g
+its same as
+h_pert = (R(q) * R(dq))^T * g = R(dq)^T * R(q)^T * g;
+given that R(q)^T * g = h
+we get
+h_pert = R(dq)^T * h
+δq = [ 1, δθ/2 ] from small rotation approximation
+lets rotate some vector v by δq
+[ 1, δθ/2 ] ⊗ [0,v] ⊗ [ 1, -δθ/2 ]
+[ 1, δθ/2 ] ⊗ [0,v] = [ -1/2 (δθ*v), v + 1/2 (δθ (x) v)]
+next
+[ -1/2 (δθ*v), v + 1/2 (δθ (x) v) ] ⊗ [ 1, -δθ/2 ] =
+= [ -1/2 (δθ*v) - (v + 1/2 (δθ (x) v))*(-δθ/2),
+  -1/2 (δθ*v)*(-δθ/2) + v + 1/2 (δθ (x) v) + (v + 1/2 (δθ (x) v)) (x) (-δθ/2) ];
+scalar part:
+w = [ -1/2(δθ*v) - (v - 1/2 * (δθ (x) v))*(δθ/2) ] =
+  = [ -1/2(δθ*v) - v*(δθ)/2 + 1/4 * (δθ (x) v)*(δθ)];
+  (δθ (x) v)*(δθ) part cancels out because (v(x)w) * v rule; v(x)w is parallel to v => dot product 0
+w = [-1/2*(δθ*v + v*δθ)];
+δθ*v + v*δθ - cancels out because dot product is commutative
+w = 0
+vector part:
+-1/2 (δθ*v)*(-δθ/2) + v + 1/2 (δθ (x) v) + (v + 1/2 (δθ (x) v)) (x) (-δθ/2)
+since its a small rotation we can linearize and drop second and higher orders
+        |                      |                             |
+ this term has squared δθ    this term we keep            third term we are going to expand;
+    we drop it
+
+(v + 1/2 (δθ (x) v)) (x) (-δθ/2) = v(x)(-δθ/2) +  1/2 (δθ (x) v)(x)(-δθ/2)
+drop second term since it has second order
+we keep = 1/2 δθ(x)v so vector part is
+v + 1/2 (δθ (x) v) + 1/2 δθ(x)v = v + δθ(x)v
+which gives us vector that is rotated by dq
+[0, v + δθ(x)v]
+vector part is a linear operation and can be represented by matrix
+[δθx]
+
+v + δθ(x)v = Iv + Iδθ(x)v = (I + [δθx])v
+matrix form rotation is R*v    and this term is exactly R
+Lets get back to Jacobian
+h_pert = R(dq)^T * h = (I + [δθx])^T * h = h + [δθx]^T*h
+dh = h_pert - h = h + [δθx]^T*h - h = [δθx]^T*h
+matrix that derived from cross product operation is called scew matrix and its property is that its transpose is just negative
+[δθx]^T = -[δθx]
+dh = -[δθx]*h; we can now replace cross product matrix back to cross product operation
+dh = -(δθ(x)h) = h(x)δθ; now translate it back to matrix form;
+dh = [hx]δθ
+and now
+H = dh/δθ = [hx]δθ/δθ = [hx]
+and in order to get [hx] we need to cross product h(x)δθ and derive matrix coeffs like we did for A matrix
+final
+[hx] =   [0, -h_z, h_y]
+         [h_z, 0, -h_x]
+         [-h_y, h_x, 0]
+
+and then
+S = H * P_pred * H^T + R_acc
+K      = P_pred * H^T * S^(-1)    # gain
+δθ̂     = K · error
+q_next  = normalize( q_pred ⊗ [1, δθ̂/2] )
+δθ      = 0
+
+and lastly shrink uncertanty
+Pnext = (I - K*H)*P_pred
+the problem with this form is that both matricies are symmetric (P = P^T) and due to floating math
+after some time symmetry can break
+lets rewrite this formula in Joseph form
+in general the rule is A*(some matrix)*A^T stays symmetric
+this looks like this for Pnext
+Pnext = (I − KH) P (I − KH)ᵀ + K R Kᵀ
+
+lets proof that they are same operations:
+(I − KH) P (I − KH)ᵀ + K R Kᵀ = (I - K*H)*P_pred
+lets expand first part
+(I − KH)(P - PHᵀKᵀ) = P - PHᵀKᵀ - KHP + KHPHᵀKᵀ; so
+P - PHᵀKᵀ - KHP + KHPHᵀKᵀ + KRKᵀ =  (I - K*H)*P_pred;
+P - PHᵀKᵀ - KHP + K(HPHᵀ + R)Kᵀ
+remember that S is H * P_pred * H^T + R_acc so
+
+P - PHᵀKᵀ - KHP + K(HPHᵀ + R)Kᵀ = P - PHᵀKᵀ - KHP + KSKᵀ;
+remember that K = P_pred * H^T * S^(-1)
+KS = PHᵀ
+P - PHᵀKᵀ - KHP + KSKᵀ = P - KSKᵀ - KHP + KSKᵀ
+cancel terms and get
+P - KHP = (I - KH)P
