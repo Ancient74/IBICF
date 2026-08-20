@@ -14,8 +14,8 @@ class OsdHorizonNode
 public:
     using InputType = Quaternion<float>;
 
-    OsdHorizonNode(std::shared_ptr<OsdController> osd, uint16_t updateRateHz)
-        : Base("OsdHorizon", pdMS_TO_TICKS(1000 / updateRateHz)),
+    OsdHorizonNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
+        : Base(taskName, pdMS_TO_TICKS(1000 / updateRateHz)),
           m_osd(osd), m_renderer(osd->Rows(), osd->Cols())
     {
         m_mutex = xSemaphoreCreateMutex();

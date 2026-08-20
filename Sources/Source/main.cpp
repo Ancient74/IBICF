@@ -86,7 +86,7 @@ extern "C" void main_cpp()
     auto osdUart = std::make_unique<Uart>(huart2, osdReader);
     auto osdModule = std::make_unique<OsdModule>(std::move(osdUart), osdReader);
     auto osdController = std::make_shared<OsdController>(std::move(osdModule));
-    auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController, 20);
+    auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController, "OsdHorizon", Config::OSD_HORIZON_LINE_UPDATE_RATE_HZ);
     Connect(fusion, *osdHorizonNode);
     fusion.Start();
 

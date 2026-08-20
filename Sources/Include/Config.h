@@ -9,4 +9,6 @@ namespace Config
     constexpr float BATTERY_MAX_VOLTAGE = 25.2f;
     constexpr float BATTERY_ADC_MAX_VOLTAGE = 3.0f;
     constexpr uint8_t BATTERY_SAMPLING_RATE_HZ = 20;
+
+    constexpr uint8_t OSD_HORIZON_LINE_UPDATE_RATE_HZ = 20;
 }
