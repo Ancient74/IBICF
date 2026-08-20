@@ -9,13 +9,16 @@
 class AdcSensor
 {
 public:
-    explicit AdcSensor(ADC_HandleTypeDef& handle);
+    explicit AdcSensor(ADC_HandleTypeDef& handle, uint32_t channel);
     ~AdcSensor();
 
     AdcSensor(const AdcSensor&) = delete;
     AdcSensor& operator=(const AdcSensor&) = delete;
 
     Status StartDmaTransactionAndWait(std::span<uint16_t> buffer);
+
+    uint32_t GetSamplingRate() const;
+    uint32_t GetAdcResolutionBits() const;
 
     static AdcSensor* GetInstance();
 
@@ -29,6 +32,8 @@ private:
     ADC_HandleTypeDef& m_handle;
     SemaphoreHandle_t m_completeSem{};
     std::atomic_bool m_error{false};
+
+    uint32_t m_channel;
 
     static inline AdcSensor* s_instance = nullptr;
 };

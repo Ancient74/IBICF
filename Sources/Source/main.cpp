@@ -1,4 +1,6 @@
 #include "main.h"
+#include "AdcSensor.h"
+#include "Config.h"
 #include "cmsis_os.h"
 #include "CrsfLink.h"
 #include <ThrustController.h>
@@ -11,6 +13,7 @@
 #include "EmaFilterNode.h"
 #include "OsdModule.h"
 #include "OsdHorizonNode.h"
+#include "BatterySensorNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -75,6 +78,9 @@ extern "C" void main_cpp()
         qmcNode->Start();
     }
     mpuNode->Start();
+
+    auto adcSensor = std::make_unique<AdcSensor>(hadc1, ADC_CHANNEL_1);
+    auto batterySensor = std::make_unique<BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE>>(std::move(adcSensor), "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ);
 
     auto osdReader = std::make_shared<OsdResponseReader>();
     auto osdUart = std::make_unique<Uart>(huart2, osdReader);
