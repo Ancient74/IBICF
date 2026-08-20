@@ -24,9 +24,9 @@ class Qmc5883L : private I2cSensor
 public:
     Qmc5883L(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex);
 
-    I2cSensor::Status Start();
+    Status Start();
 
-    I2cSensor::Status GetRawValues(Magnetometer& magnetometer);
+    Status GetRawValues(Magnetometer& magnetometer);
     void Normalize(Magnetometer& magnetometer);
     void GetSensorVariance(Matrix3f& R);
     uint16_t GetSamplingRate() const;

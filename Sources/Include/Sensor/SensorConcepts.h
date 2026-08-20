@@ -11,6 +11,6 @@ concept SampleValue = requires(O o, float mult) {
 template<typename T, typename O>
 concept SensorDevice = SampleValue<O> && requires(T t, O& o) {
     { t.GetSamplingRate() } -> std::same_as<uint16_t>;
-    { t.GetRawValues(o) } -> std::same_as<I2cSensor::Status>;
+    { t.GetRawValues(o) } -> std::same_as<Status>;
     { t.Normalize(o) } -> std::same_as<void>;
 };

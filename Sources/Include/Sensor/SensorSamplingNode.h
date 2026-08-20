@@ -2,7 +2,7 @@
 #include <memory>
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "I2cSensor.h"
+#include "SensorStatus.h"
 #include "SensorConcepts.h"
 #include "CommonTask.h"
 #include <PubSubLib/Node.hpp>
@@ -30,7 +30,7 @@ public:
     void RunTaskIteration()
     {
         SensorOutputT raw{};
-        if (m_sensor->GetRawValues(raw) == I2cSensor::Status::Ok)
+        if (m_sensor->GetRawValues(raw) == Status::Ok)
         {
             m_sensor->Normalize(raw);
             this->Publish(raw);

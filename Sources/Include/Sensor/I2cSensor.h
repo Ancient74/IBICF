@@ -5,6 +5,7 @@
 #include <span>
 #include "main.h"
 #include "semphr.h"
+#include "SensorStatus.h"
 
 class I2cBusLock
 {
@@ -39,21 +40,13 @@ private:
 class I2cSensor
 {
 public:
-    enum class Status
-    {
-        Ok,
-        Error,
-        Busy,
-        Timeout
-    };
-
     I2cSensor(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex, uint16_t address);
 
     Status WriteBytes(uint16_t registerAddress, std::span<const uint8_t> bytes);
-    I2cSensor::Status ReadBytes(uint16_t registerAddress, std::span<uint8_t> buffer);
+    Status ReadBytes(uint16_t registerAddress, std::span<uint8_t> buffer);
 
     Status WriteByte(uint16_t registerAddress, uint8_t byte);
-    I2cSensor::Status ReadByte(uint16_t registerAddress, uint8_t& byte);
+    Status ReadByte(uint16_t registerAddress, uint8_t& byte);
 
 private:
     I2C_HandleTypeDef& m_i2c;

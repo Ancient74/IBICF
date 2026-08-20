@@ -73,7 +73,7 @@ namespace
 Qmc5883L::Qmc5883L(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex) : I2cSensor(i2c, mutex, QMC5883L_ADDRESS)
 {}
 
-I2cSensor::Status Qmc5883L::Start()
+Status Qmc5883L::Start()
 {
     // Documentation says that its recommended to set it to 0x01
     auto ret = WriteByte(QMC5883L_SET_RESET, 0x01);
@@ -94,7 +94,7 @@ I2cSensor::Status Qmc5883L::Start()
     return ret;
 }
 
-I2cSensor::Status Qmc5883L::GetRawValues(Magnetometer& magnetometer)
+Status Qmc5883L::GetRawValues(Magnetometer& magnetometer)
 {
     uint8_t data[6];
     ValueRegister m[3];

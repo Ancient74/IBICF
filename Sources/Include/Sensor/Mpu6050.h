@@ -55,9 +55,9 @@ class Mpu6050 : private I2cSensor
 public:
     Mpu6050(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex);
 
-    I2cSensor::Status Start();
+    Status Start();
 
-    I2cSensor::Status GetRawValues(GyroscopeAccelerometer& ga);
+    Status GetRawValues(GyroscopeAccelerometer& ga);
     void Normalize(GyroscopeAccelerometer& ga);
 
     // R is noise covariance matrix from accelerometer

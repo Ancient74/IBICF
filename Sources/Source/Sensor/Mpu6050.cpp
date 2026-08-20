@@ -135,7 +135,7 @@ namespace
 Mpu6050::Mpu6050(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex) : I2cSensor(i2c, mutex, MPU6050_ADDRESS)
 {}
 
-I2cSensor::Status Mpu6050::Start()
+Status Mpu6050::Start()
 {
     uint8_t whoAmI;
     auto ret = ReadByte(MPU6050_WHO_AM_I, whoAmI);
@@ -191,7 +191,7 @@ I2cSensor::Status Mpu6050::Start()
     return ret;
 }
 
-I2cSensor::Status Mpu6050::GetRawValues(GyroscopeAccelerometer& ga)
+Status Mpu6050::GetRawValues(GyroscopeAccelerometer& ga)
 {
     uint8_t data[14];
 	const auto ret = ReadBytes(MPU6050_ACCEL_XOUT_H, data);
