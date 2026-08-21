@@ -2,15 +2,15 @@
 #include <stdint.h>
 #include <array>
 #include "KalmanLib/Quaternion.hpp"
+#include "OsdController.h"
 
 template<uint8_t MaxCols = 30>
-class HorizonRenderer
+class OsdHorizonRenderer
 {
 public:
-    struct Cell { uint8_t row; uint8_t col; uint8_t charCode; };
-    using CellList = std::array<Cell, MaxCols>;
+    using CellList = std::array<OsdCell, MaxCols>;
 
-    HorizonRenderer(uint8_t rows, uint8_t cols) : m_rows(rows), m_cols(cols) {}
+    OsdHorizonRenderer(uint8_t rows, uint8_t cols) : m_rows(rows), m_cols(cols) {}
 
     uint8_t Compute(const Attitude& att, CellList& out) const
     {

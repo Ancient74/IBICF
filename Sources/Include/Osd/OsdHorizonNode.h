@@ -1,6 +1,7 @@
 #pragma once
 #include <KalmanLib/Quaternion.hpp>
 #include "OsdController.h"
+#include "OsdHorizonRenderer.h"
 #include "CommonTask.h"
 #include <optional>
 #include <PubSubLib/Node.hpp>
@@ -45,14 +46,14 @@ public:
         if (!quat.has_value())
             return;
 
-        HorizonRenderer<>::CellList cells{};
+        OsdHorizonRenderer<>::CellList cells{};
         const uint8_t count = m_renderer.Compute(quat->ToAttitude(), cells);
         m_osd->DrawCells({cells.data(), count});
     }
 
 private:
     std::shared_ptr<OsdController> m_osd;
-    HorizonRenderer<> m_renderer;
+    OsdHorizonRenderer<> m_renderer;
     std::optional<Quaternion<float>> m_latestQuat{};
     SemaphoreHandle_t m_mutex{};
 };

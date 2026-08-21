@@ -25,7 +25,7 @@ uint8_t OsdController::Cols() const
     return m_cols;
 }
 
-void OsdController::DrawCells(std::span<const HorizonRenderer<>::Cell> cells)
+void OsdController::DrawCells(std::span<const OsdCell> cells)
 {
     for (const auto& prev : m_lastCells)
     {
