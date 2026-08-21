@@ -8,9 +8,15 @@
 #include <memory>
 #include <span>
 
+struct BatteryInfo
+{
+    float chargeLevel;
+    uint8_t percentLevel;
+};
+
 template<float MaxBatteryVoltage, float AdcInMaxVoltage>
 class BatterySensorNode
-    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, float, 1>
+    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, BatteryInfo, 1>
     , public CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 512, configMAX_PRIORITIES / 2 - 2>
 {
     using Base = CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 512, configMAX_PRIORITIES / 2 - 2>;
@@ -65,8 +71,10 @@ public:
             * AdcInMaxVoltage;
 
         const float batteryVoltage = adcVoltage * (MaxBatteryVoltage / AdcInMaxVoltage);
+        const float chargePercent = batteryVoltage / MaxBatteryVoltage * 100.0f;
+        const uint8_t percentLevel = static_cast<uint8_t>(chargePercent + 0.5f);
 
-        this->Publish(batteryVoltage);
+        this->Publish({batteryVoltage, percentLevel});
     }
 
 private:

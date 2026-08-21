@@ -14,6 +14,7 @@
 #include "OsdModule.h"
 #include "OsdHorizonNode.h"
 #include "BatterySensorNode.h"
+#include "OsdBatteryVoltageNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -87,8 +88,11 @@ extern "C" void main_cpp()
     auto osdModule = std::make_unique<OsdModule>(std::move(osdUart), osdReader);
     auto osdController = std::make_shared<OsdController>(std::move(osdModule));
     auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController, "OsdHorizon", Config::OSD_HORIZON_LINE_UPDATE_RATE_HZ);
+    auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController, "BatteryVoltage", Config::BATTERY_SAMPLING_RATE_HZ);
     Connect(fusion, *osdHorizonNode);
+    Connect(*batterySensor, *osdBatteryInfoNode);
     fusion.Start();
+    batterySensor->Start();
 
     CrsfLink link(huart1, model);
     while (true)
