@@ -1,5 +1,6 @@
 #include "main.h"
 #include "AdcSensor.h"
+#include "BME280.h"
 #include "Config.h"
 #include "cmsis_os.h"
 #include "CrsfLink.h"
@@ -15,6 +16,7 @@
 #include "OsdHorizonNode.h"
 #include "BatterySensorNode.h"
 #include "OsdBatteryVoltageNode.h"
+#include "PressureToAltitudeConverterNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -79,6 +81,21 @@ extern "C" void main_cpp()
         qmcNode->Start();
     }
     mpuNode->Start();
+
+    std::unique_ptr<BME280> bmeSensor = bus->CreateSensor<BME280>();
+    std::unique_ptr<SensorSamplingNode<BME280, BME280::Measurements, 1>> bmeNode = nullptr;
+    std::unique_ptr<EmaFilterNode<BME280::Measurements, 1>> bmeFilterNode = nullptr;
+    std::unique_ptr<PressureToAltitudeConverterNode<2>> altitudeNode = nullptr;
+
+    if(bmeSensor->Start() == Status::Ok)
+    {
+        BME280::Measurements baseMeasurements{};
+        bmeSensor->Calibrate(baseMeasurements);
+        bmeNode = std::make_unique<SensorSamplingNode<BME280, BME280::Measurements, 1>>(std::move(bmeSensor), "BME");
+        bmeFilterNode = std::make_unique<EmaFilterNode<BME280::Measurements, 1>>(0.1f, 5);
+        altitudeNode = std::make_unique<PressureToAltitudeConverterNode<2>>(baseMeasurements.pressure, baseMeasurements.temperature);
+        bmeNode->Start();
+    }
 
     auto adcSensor = std::make_unique<AdcSensor>(hadc1, ADC_CHANNEL_1);
     auto batterySensor = std::make_unique<BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE>>(std::move(adcSensor), "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ);

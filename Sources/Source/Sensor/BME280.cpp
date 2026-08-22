@@ -1,6 +1,19 @@
 #include "BME280.h"
 #include "stm32f4xx_hal.h"
 
+namespace
+{
+    constexpr uint8_t OVERSAMPLING_TEMPERATURE = 1;
+    constexpr uint8_t OVERSAMPLING_PRESSURE    = 1;
+    constexpr uint8_t OVERSAMPLING_HUMIDITY    = 1;
+    constexpr uint8_t MODE = 3;
+    constexpr uint8_t STANDBY_REG = 0;
+
+    constexpr float STANDBY_TABLE[8] = {0.5f, 62.5f, 125.0f, 250.0f, 500.0f, 1000.0f, 10.0f, 20.0f};
+
+    constexpr uint16_t CALIBRATION_SAMPLES = 32;
+}
+
 BME280::BME280(I2C_HandleTypeDef& handle, SemaphoreHandle_t mutex, uint16_t address)
     : I2cSensor(handle, mutex, address)
 {}
@@ -30,9 +43,9 @@ Status BME280::Start()
     }
 
     {
-        constexpr uint8_t osrs_t = 1;
-        constexpr uint8_t osrs_p = 1;
-        constexpr uint8_t mode   = 3; // normal mode
+        constexpr uint8_t osrs_t = OVERSAMPLING_TEMPERATURE;
+        constexpr uint8_t osrs_p = OVERSAMPLING_PRESSURE;
+        constexpr uint8_t mode   = MODE; // normal mode
 
         auto res = WriteByte(0xF4, static_cast<uint8_t>((osrs_t << 5) | (osrs_p << 2) | mode));
         if (res != Status::Ok)
@@ -40,7 +53,7 @@ Status BME280::Start()
     }
 
     {
-        constexpr uint8_t t_sb   = 5;
+        constexpr uint8_t t_sb   = STANDBY_REG;
         constexpr uint8_t filter = 0;
         constexpr uint8_t spi3w  = 0; // unused on I2C, register bit is don't-care
 
@@ -77,7 +90,7 @@ Status BME280::ReadBmeData(BmeData& data)
     return ReadBytes(0xF7, std::span<uint8_t>{reinterpret_cast<uint8_t*>(&data), sizeof(BmeData)});
 }
 
-Status BME280::Read(BME280::Measurements& measurements)
+Status BME280::GetRawValues(BME280::Measurements& measurements)
 {
     BmeData data{};
     auto res = ReadBmeData(data);
@@ -136,4 +149,44 @@ uint32_t BME280::CompensateHumidity(Raw16 rawHumidity)
     v_x1_u32r = (v_x1_u32r < 0 ? 0 : v_x1_u32r);
     v_x1_u32r = (v_x1_u32r > 419430400 ? 419430400 : v_x1_u32r);
     return static_cast<uint32_t>(v_x1_u32r>>12);
+}
+
+uint16_t BME280::GetSamplingRate() const
+{
+    constexpr float measureMaxMs = 1.25f
+        + 2.3f * OVERSAMPLING_TEMPERATURE
+        + 2.3f * OVERSAMPLING_PRESSURE + 0.575f
+        + 2.3f * OVERSAMPLING_HUMIDITY + 0.575f;
+
+    constexpr float periodMs = measureMaxMs + STANDBY_TABLE[STANDBY_REG];
+
+    return static_cast<uint16_t>((1000.0f / periodMs) + 0.5f);
+}
+
+void BME280::Normalize(Measurements&)
+{
+    // noop
+}
+
+void BME280::Calibrate(Measurements& baseMeasurements)
+{
+    uint16_t samplesTaken = 0;
+    const uint16_t rateHz = GetSamplingRate();
+    const uint32_t sampleDelayMs = (rateHz > 0) ? (1000u / rateHz) + 1u : 10u;
+    Measurements res{};
+
+    for (uint16_t i = 0; i < CALIBRATION_SAMPLES; i++)
+    {
+        Measurements m{};
+        if (GetRawValues(m) == Status::Ok)
+        {
+            res = res + m;
+            ++samplesTaken;
+        }
+        HAL_Delay(sampleDelayMs);
+    }
+    if (samplesTaken > 0)
+        res = res * (1.0f / samplesTaken);
+
+    baseMeasurements = res;
 }

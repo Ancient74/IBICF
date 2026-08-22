@@ -1,5 +1,6 @@
 #pragma once
 #include "I2cSensor.h"
+#include "math.h"
 
 struct Raw20
 {
@@ -75,7 +76,12 @@ public:
 
     Status Start();
 
-    Status Read(Measurements& measurements);
+    Status GetRawValues(Measurements& measurements);
+    void Normalize(Measurements& measurements);
+
+    void Calibrate(Measurements& baseMeasurements);
+
+    uint16_t GetSamplingRate() const;
 
 private:
     struct BmeData
@@ -97,3 +103,23 @@ private:
     CompensationParameters1 m_params1{};
     CompensationParameters2 m_params2{};
 };
+
+static BME280::Measurements operator+(const BME280::Measurements& a, const BME280::Measurements& b)
+{
+    BME280::Measurements res{};
+    res.humidity = a.humidity + b.humidity;
+    res.pressure = a.pressure + b.pressure;
+    res.temperature = a.temperature + b.temperature;
+
+    return res;
+}
+
+static BME280::Measurements operator*(const BME280::Measurements& a, float mult)
+{
+    BME280::Measurements res = a;
+    res.humidity = static_cast<uint32_t>(std::lround(a.humidity * mult));
+    res.pressure = static_cast<uint32_t>(std::lround(a.pressure * mult));
+    res.temperature = static_cast<uint32_t>(std::lround(a.temperature * mult));
+
+    return res;
+}
