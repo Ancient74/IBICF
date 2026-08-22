@@ -1,59 +1,25 @@
 #pragma once
 #include <KalmanLib/Quaternion.hpp>
-#include "OsdController.h"
 #include "OsdHorizonRenderer.h"
-#include "CommonTask.h"
-#include <optional>
-#include <PubSubLib/Node.hpp>
+#include "OsdRenderingNode.h"
 
-class OsdHorizonNode
-    : public CommonTask<OsdHorizonNode, 512, configMAX_PRIORITIES / 2 - 1>
-    , public NodeInput<OsdHorizonNode, Quaternion<float>>
+class OsdHorizonNode : public OsdRenderingNode<OsdHorizonNode, Quaternion<float>>
 {
-    using Base = CommonTask<OsdHorizonNode, 512, configMAX_PRIORITIES / 2 - 1>;
-
 public:
-    using InputType = Quaternion<float>;
-
     OsdHorizonNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
-        : Base(taskName, pdMS_TO_TICKS(1000 / updateRateHz)),
-          m_osd(osd), m_renderer(osd->Rows(), osd->Cols())
+        : OsdRenderingNode<OsdHorizonNode, Quaternion<float>>(std::move(osd), taskName, updateRateHz)
+        , m_renderer(osd ? osd->Rows() : 0, osd ? osd->Cols() : 0)
     {
-        m_mutex = xSemaphoreCreateMutex();
-        configASSERT(m_mutex != nullptr);
-        Start();
     }
 
-    ~OsdHorizonNode()
+    void Render(Quaternion<float> quat)
     {
-        Stop();
-        vSemaphoreDelete(m_mutex);
-    }
-
-    void Process(const Quaternion<float>& quat)
-    {
-        xSemaphoreTake(m_mutex, portMAX_DELAY);
-        m_latestQuat = quat;
-        xSemaphoreGive(m_mutex);
-    }
-
-    void RunTaskIteration()
-    {
-        xSemaphoreTake(m_mutex, portMAX_DELAY);
-        auto quat = m_latestQuat;
-        m_latestQuat = std::nullopt;
-        xSemaphoreGive(m_mutex);
-        if (!quat.has_value())
-            return;
-
         OsdHorizonRenderer<>::CellList cells{};
-        const uint8_t count = m_renderer.Compute(quat->ToAttitude(), cells);
-        m_osd->DrawCells({cells.data(), count});
+        const uint8_t count = m_renderer.Compute(quat.ToAttitude(), cells);
+        std::span<const OsdCell> cellsSpan(cells.data(), count);
+        GetOsdController()->DrawCells(cellsSpan);
     }
 
 private:
-    std::shared_ptr<OsdController> m_osd;
     OsdHorizonRenderer<> m_renderer;
-    std::optional<Quaternion<float>> m_latestQuat{};
-    SemaphoreHandle_t m_mutex{};
 };

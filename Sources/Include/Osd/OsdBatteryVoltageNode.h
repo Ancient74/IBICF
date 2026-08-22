@@ -1,53 +1,21 @@
 #pragma once
-#include <KalmanLib/Quaternion.hpp>
 #include "BatterySensorNode.h"
-#include "OsdController.h"
-#include "CommonTask.h"
-#include <optional>
-#include <PubSubLib/Node.hpp>
+#include "OsdRenderingNode.h"
 
-class OsdBatteryVoltageNode
-    : public CommonTask<OsdBatteryVoltageNode, 512, configMAX_PRIORITIES / 2 - 2>
-    , public NodeInput<OsdBatteryVoltageNode, BatteryInfo>
+class OsdBatteryVoltageNode : public OsdRenderingNode<OsdBatteryVoltageNode, BatteryInfo>
 {
-    using Base = CommonTask<OsdBatteryVoltageNode, 512, configMAX_PRIORITIES / 2 - 2>;
-
 public:
-    OsdBatteryVoltageNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
-        : Base(taskName, pdMS_TO_TICKS(1000 / updateRateHz))
-        , m_osd(osd)
+OsdBatteryVoltageNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
+        : OsdRenderingNode<OsdBatteryVoltageNode, BatteryInfo>(std::move(osd), taskName, updateRateHz)
         , m_xPos(m_osd->Cols() - 6) // -6 for every character before last col (I25.5V)
         , m_yPos(0)
     {
-        m_mutex = xSemaphoreCreateMutex();
-        configASSERT(m_mutex != nullptr);
-        Start();
     }
 
-    ~OsdBatteryVoltageNode()
+    void Render(BatteryInfo info)
     {
-        Stop();
-        vSemaphoreDelete(m_mutex);
-    }
-
-    void Process(BatteryInfo batteryInfo)
-    {
-        xSemaphoreTake(m_mutex, portMAX_DELAY);
-        m_latestInfo = batteryInfo;
-        xSemaphoreGive(m_mutex);
-    }
-
-    void RunTaskIteration()
-    {
-        xSemaphoreTake(m_mutex, portMAX_DELAY);
-        auto voltage = m_latestInfo;
-        m_latestInfo = std::nullopt;
-        xSemaphoreGive(m_mutex);
-        if (!voltage.has_value())
-            return;
-
         char buffer[6];
-        const auto value = voltage.value().chargeLevel;
+        const auto value = info.chargeLevel;
         if (value < 10.0f)
             std::snprintf(buffer, sizeof(buffer), "%.2fv", value);
         else if (value < 100.0f)
@@ -55,7 +23,7 @@ public:
         else
             std::snprintf(buffer, sizeof(buffer), "%.0fv", value);
 
-        const auto percent = voltage.value().percentLevel;
+        const auto percent = info.percentLevel;
         uint8_t chargeLevelIcon = Charge100CharCode;
         if (percent < 10)
             chargeLevelIcon = Charge0CharCode;
@@ -80,7 +48,7 @@ public:
             cells[i].col = m_xPos + i;
             cells[i].row = m_yPos;
         }
-        m_osd->DrawCells(cells);
+        GetOsdController()->DrawCells(cells);
     }
 
 private:
@@ -112,9 +80,6 @@ private:
         return result;
     }();
 
-    std::shared_ptr<OsdController> m_osd;
     const uint8_t m_xPos;
     const uint8_t m_yPos;
-    std::optional<BatteryInfo> m_latestInfo{};
-    SemaphoreHandle_t m_mutex{};
 };
