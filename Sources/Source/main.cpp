@@ -17,6 +17,7 @@
 #include "BatterySensorNode.h"
 #include "OsdBatteryVoltageNode.h"
 #include "PressureToAltitudeConverterNode.h"
+#include "OsdAltitudeNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -86,6 +87,7 @@ extern "C" void main_cpp()
     std::unique_ptr<SensorSamplingNode<BME280, BME280::Measurements, 1>> bmeNode = nullptr;
     std::unique_ptr<EmaFilterNode<BME280::Measurements, 1>> bmeFilterNode = nullptr;
     std::unique_ptr<PressureToAltitudeConverterNode<2>> altitudeNode = nullptr;
+    std::unique_ptr<OsdAltitudeNode> osdAltitudeNode = nullptr;
 
     if(bmeSensor->Start() == Status::Ok)
     {
@@ -106,10 +108,17 @@ extern "C" void main_cpp()
     auto osdController = std::make_shared<OsdController>(std::move(osdModule));
     auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController, "OsdHorizon", Config::OSD_HORIZON_LINE_UPDATE_RATE_HZ);
     auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController, "BatteryVoltage", Config::BATTERY_SAMPLING_RATE_HZ);
+
     Connect(fusion, *osdHorizonNode);
     Connect(*batterySensor, *osdBatteryInfoNode);
     fusion.Start();
     batterySensor->Start();
+    if (altitudeNode)
+    {
+        osdAltitudeNode = std::make_unique<OsdAltitudeNode>(osdController, "Altitude", Config::ALTITUDE_SAMPLING_RATE_HZ);
+        Connect(*altitudeNode, *osdAltitudeNode);
+        osdAltitudeNode->Start();
+    }
 
     CrsfLink link(huart1, model);
     while (true)
