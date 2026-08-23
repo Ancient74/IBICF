@@ -58,10 +58,11 @@ private:
         auto* self = static_cast<CommonTask*>(arg);
         auto* derived = static_cast<Derived*>(self);
 
+        TickType_t lastWakeTime = xTaskGetTickCount();
         while (!self->m_isFinishing.load(std::memory_order_acquire))
         {
             derived->RunTaskIteration();
-            vTaskDelay(self->m_period);
+            vTaskDelayUntil(&lastWakeTime, self->m_period);
         }
 
         xSemaphoreGive(self->m_doneSem);
