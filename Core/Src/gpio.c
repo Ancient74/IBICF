@@ -62,5 +62,14 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
-
+void ConfigureOpenDrain()
+{
+  GPIO_InitTypeDef openDrainInit = {0};
+  openDrainInit.Pin = TRAMP_Pin;
+  openDrainInit.Mode = GPIO_MODE_OUTPUT_OD;
+  openDrainInit.Pull = GPIO_PULLUP;
+  openDrainInit.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(TRAMP_GPIO_Port, &openDrainInit);
+  HAL_GPIO_WritePin(TRAMP_GPIO_Port, TRAMP_Pin, GPIO_PIN_SET);
+}
 /* USER CODE END 2 */
