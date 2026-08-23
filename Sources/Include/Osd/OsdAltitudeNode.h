@@ -1,13 +1,13 @@
 #pragma once
-#include "OsdRenderingNode.h"
+#include "OsdRenderer.h"
 
-class OsdAltitudeNode : public OsdRenderingNode<OsdAltitudeNode, float>
+class OsdAltitudeNode : public OsdRenderer<OsdAltitudeNode, float>
 {
 public:
-    OsdAltitudeNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
-        : OsdRenderingNode<OsdAltitudeNode, float>(std::move(osd), taskName, updateRateHz)
-        , m_xPos(m_osd->Cols() - 7)
-        , m_yPos(m_osd->Rows() - 6)
+    OsdAltitudeNode(std::shared_ptr<OsdController> osd)
+        : OsdRenderer<OsdAltitudeNode, float>(std::move(osd))
+        , m_xPos(GetOsdController()->Cols() - 7)
+        , m_yPos(GetOsdController()->Rows() - 6)
     {
     }
 

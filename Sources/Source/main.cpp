@@ -13,6 +13,7 @@
 #include <PubSubLib/Node.hpp>
 #include "EmaFilterNode.h"
 #include "OsdModule.h"
+#include "OsdCompositorTask.h"
 #include "OsdHorizonNode.h"
 #include "BatterySensorNode.h"
 #include "OsdBatteryVoltageNode.h"
@@ -106,19 +107,25 @@ extern "C" void main_cpp()
     auto osdUart = std::make_unique<Uart>(huart2, osdReader);
     auto osdModule = std::make_unique<OsdModule>(std::move(osdUart), osdReader);
     auto osdController = std::make_shared<OsdController>(std::move(osdModule));
-    auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController, "OsdHorizon", Config::OSD_HORIZON_LINE_UPDATE_RATE_HZ);
-    auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController, "BatteryVoltage", Config::BATTERY_SAMPLING_RATE_HZ);
+    auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController);
+    auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController);
+    auto osdCompositorTask = std::make_unique<OsdCompositorTask<3>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
+    osdCompositorTask->Register(*osdHorizonNode);
+    osdCompositorTask->Register(*osdBatteryInfoNode);
+
+    if (altitudeNode)
+    {
+        osdAltitudeNode = std::make_unique<OsdAltitudeNode>(osdController);
+        Connect(*altitudeNode, *osdAltitudeNode);
+        osdCompositorTask->Register(*osdAltitudeNode);
+    }
 
     Connect(fusion, *osdHorizonNode);
     Connect(*batterySensor, *osdBatteryInfoNode);
+
     fusion.Start();
     batterySensor->Start();
-    if (altitudeNode)
-    {
-        osdAltitudeNode = std::make_unique<OsdAltitudeNode>(osdController, "Altitude", Config::ALTITUDE_SAMPLING_RATE_HZ);
-        Connect(*altitudeNode, *osdAltitudeNode);
-        osdAltitudeNode->Start();
-    }
+    osdCompositorTask->StartCompositor();
 
     CrsfLink link(huart1, model);
     while (true)

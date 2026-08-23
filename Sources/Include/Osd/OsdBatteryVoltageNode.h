@@ -1,13 +1,13 @@
 #pragma once
 #include "BatterySensorNode.h"
-#include "OsdRenderingNode.h"
+#include "OsdRenderer.h"
 
-class OsdBatteryVoltageNode : public OsdRenderingNode<OsdBatteryVoltageNode, BatteryInfo>
+class OsdBatteryVoltageNode : public OsdRenderer<OsdBatteryVoltageNode, BatteryInfo>
 {
 public:
-OsdBatteryVoltageNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
-        : OsdRenderingNode<OsdBatteryVoltageNode, BatteryInfo>(std::move(osd), taskName, updateRateHz)
-        , m_xPos(m_osd->Cols() - 6) // -6 for every character before last col (I25.5V)
+    OsdBatteryVoltageNode(std::shared_ptr<OsdController> osd)
+        : OsdRenderer<OsdBatteryVoltageNode, BatteryInfo>(std::move(osd))
+        , m_xPos(GetOsdController()->Cols() - 6) // -6 for every character before last col (I25.5V)
         , m_yPos(0)
     {
     }

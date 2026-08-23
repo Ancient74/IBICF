@@ -1,13 +1,13 @@
 #pragma once
 #include <KalmanLib/Quaternion.hpp>
 #include "OsdHorizonRenderer.h"
-#include "OsdRenderingNode.h"
+#include "OsdRenderer.h"
 
-class OsdHorizonNode : public OsdRenderingNode<OsdHorizonNode, Quaternion<float>>
+class OsdHorizonNode : public OsdRenderer<OsdHorizonNode, Quaternion<float>>
 {
 public:
-    OsdHorizonNode(std::shared_ptr<OsdController> osd, const char* taskName, uint16_t updateRateHz)
-        : OsdRenderingNode<OsdHorizonNode, Quaternion<float>>(std::move(osd), taskName, updateRateHz)
+    OsdHorizonNode(std::shared_ptr<OsdController> osd)
+        : OsdRenderer<OsdHorizonNode, Quaternion<float>>(std::move(osd))
         , m_renderer(osd ? osd->Rows() : 0, osd ? osd->Cols() : 0)
     {
     }

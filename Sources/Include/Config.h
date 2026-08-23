@@ -8,8 +8,7 @@ namespace Config
     constexpr uint32_t BATTERY_ADC_OVERSAMPLING_RATIO = 1u << (2 * BATTERY_MAX_USEFUL_EXTRA_BITS);
     constexpr float BATTERY_MAX_VOLTAGE = 25.2f;
     constexpr float BATTERY_ADC_MAX_VOLTAGE = 3.0f;
-    constexpr uint8_t BATTERY_SAMPLING_RATE_HZ = 20;
-    constexpr uint8_t ALTITUDE_SAMPLING_RATE_HZ = 20;
+    constexpr uint32_t BATTERY_SAMPLING_RATE_HZ = 20;
 
-    constexpr uint8_t OSD_HORIZON_LINE_UPDATE_RATE_HZ = 20;
+    constexpr uint8_t OSD_REFRESH_RATE_HZ = 20;
 }
