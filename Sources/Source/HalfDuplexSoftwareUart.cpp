@@ -1,4 +1,5 @@
 #include "HalfDuplexSoftwareUart.h"
+#include "Config.h"
 #include "projdefs.h"
 #include <stm32f4xx_hal_tim.h>
 
@@ -28,7 +29,7 @@ HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port,
 void HalfDuplexSoftwareUart::RunTaskIteration()
 {
     uint8_t byte;
-    if (xQueueReceive(m_writeQueue, &byte, 300) != pdTRUE)
+    if (xQueueReceive(m_writeQueue, &byte, pdMS_TO_TICKS(Config::SOFTWARE_UART_WRITE_SAMPLING_PERIOD_MS)) != pdTRUE)
         return;
 
     HAL_GPIO_WritePin(m_port, m_pin, GPIO_PIN_RESET);
