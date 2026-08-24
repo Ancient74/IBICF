@@ -12,5 +12,5 @@ namespace Config
 
     constexpr uint8_t OSD_REFRESH_RATE_HZ = 20;
 
-    constexpr uint32_t SOFTWARE_UART_WRITE_SAMPLING_PERIOD_MS = 200;
+    constexpr uint32_t SOFTWARE_UART_READ_TIMEOUT_MS = 200;
 }
