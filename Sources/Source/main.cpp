@@ -2,9 +2,11 @@
 #include "AdcSensor.h"
 #include "BME280.h"
 #include "Config.h"
+#include "HalfDuplexSoftwareUart.h"
 #include "cmsis_os.h"
 #include "CrsfLink.h"
 #include <ThrustController.h>
+#include "TrampProtocol.h"
 #include <SurfaceController.h>
 #include "SensorSamplingNode.h"
 #include "SensorFusionNode.h"
@@ -24,6 +26,7 @@ extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim10;
 extern I2C_HandleTypeDef hi2c2;
 
 using namespace std::chrono_literals;
@@ -122,6 +125,10 @@ extern "C" void main_cpp()
 
     Connect(fusion, *osdHorizonNode);
     Connect(*batterySensor, *osdBatteryInfoNode);
+
+    auto swUart = std::make_unique<HalfDuplexSoftwareUart>(TRAMP_Pin, TRAMP_GPIO_Port, htim10);
+    auto trampParser = std::make_unique<TrampFrameParser>("TrampFrameParser");
+    Connect(*swUart, *trampParser);
 
     fusion.Start();
     batterySensor->Start();
