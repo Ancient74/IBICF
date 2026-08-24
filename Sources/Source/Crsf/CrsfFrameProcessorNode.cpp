@@ -15,6 +15,8 @@ namespace
     using Pitch = Scaled<Channel<1>, 172, 1811, -45, 45>;
     using Yaw = Scaled<Channel<3>, 172, 1811, -45, 45>;
     using Thrust = Scaled<Channel<2>, 172, 1811, 0, 100>;
+    static DoubleSwitch<Channel<4>> armSwitch{};
+    static TriSwitch<Channel<5>> vtxSwitch{};
 }
 
 using namespace std::chrono_literals;
@@ -50,6 +52,8 @@ void CrsfFrameProcessorNode::Process(CrsfLib::FrameView frame)
         m_model->Pitch(Pitch::Get(packet));
         m_model->Yaw(Yaw::Get(packet));
         m_model->Roll(Roll::Get(packet));
+        bool isArmed = armSwitch.Update(packet);
+        auto vtxMode = vtxSwitch.Update(packet);
 
         break;
     }
