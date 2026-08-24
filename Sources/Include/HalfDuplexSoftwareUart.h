@@ -6,7 +6,7 @@
 #include <stm32f4xx_hal.h>
 
 class HalfDuplexSoftwareUart
-    : public CommonTask<HalfDuplexSoftwareUart, 512, configMAX_PRIORITIES / 2 - 3>
+    : public CommonTask<HalfDuplexSoftwareUart, 512, configMAX_PRIORITIES / 2 - 10>
     , public NodeOutput<HalfDuplexSoftwareUart, uint8_t, 1>
 {
 public:
