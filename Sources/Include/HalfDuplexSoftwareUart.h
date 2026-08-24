@@ -35,4 +35,5 @@ private:
     GPIO_TypeDef* m_port;
     TIM_HandleTypeDef& m_timer;
     uint32_t m_ticksPerBit;
+    uint32_t m_tickPerOversampling;
 };

@@ -31,6 +31,7 @@ HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port,
     , m_port(port)
     , m_timer(timer)
     , m_ticksPerBit(GetApb2TimerClockFreq() / (m_timer.Instance->PSC + 1) / baudRate)
+    , m_tickPerOversampling(m_ticksPerBit >> 4)
 {
     if (!s_instance)
         s_instance = this;
@@ -70,11 +71,16 @@ void HalfDuplexSoftwareUart::RunTaskIteration()
     while (HAL_GPIO_ReadPin(m_port, m_pin) == GPIO_PIN_RESET)
     {
         byte = 0;
-        DelayPeriod(m_ticksPerBit + (m_ticksPerBit >> 1));   // 1.5P -> center of bit 0
+        DelayPeriod(m_ticksPerBit);   // 1.0P -> start of bit 0
         for (uint8_t i = 0; i < 8; i++)
         {
-            byte |= (HAL_GPIO_ReadPin(m_port, m_pin) == GPIO_PIN_SET ? 1 : 0) << i;
-            DelayPeriod(m_ticksPerBit);   // full period -> center of next bit
+            uint8_t oversamplingCounter = 0;
+            for (uint8_t j = 0; j < 16; j++)
+            {
+                oversamplingCounter += (HAL_GPIO_ReadPin(m_port, m_pin) == GPIO_PIN_SET ? 1 : 0);
+                DelayPeriod(m_tickPerOversampling);   // period is divided by 16 -> start of next bit
+            }
+            byte |= (oversamplingCounter >= 8 ? 1 : 0) << i;
         }
         DelayPeriod(m_ticksPerBit >> 1);
         // ignore stop bit reading;
