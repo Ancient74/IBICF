@@ -25,6 +25,7 @@
 #include "CrsfFrameReaderNode.h"
 #include "CrsfFrameProcessorNode.h"
 #include <OsdVtxInfo.h>
+#include "VtxControllerNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -140,7 +141,6 @@ extern "C" void main_cpp()
 
     fusion.Start();
     batterySensor->Start();
-    osdCompositorTask->StartCompositor();
 
     auto crsfFrameReader = std::make_shared<CrsfFrameReaderNode>();
     auto crsfFrameParser = std::make_unique<CrsfLib::FrameParserNode>();
@@ -152,7 +152,10 @@ extern "C" void main_cpp()
     Connect(*crsfFrameParser, *crsfFrameProcessor);
     Connect(crsfFrameProcessor->GetDeviceInfoNode(), *crsfDeviceInfo);
     crsfFrameReader->Start();
+    auto vtxControllerNode = std::make_unique<VtxControllerNode>(trampProtocolController);
+    Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
 
+    osdCompositorTask->StartCompositor();
 
     while (true)
     {

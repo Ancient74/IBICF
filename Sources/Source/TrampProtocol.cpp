@@ -187,7 +187,7 @@ void TrampProtocolController::SetPower(uint16_t power)
 
 void TrampProtocolController::SetPitMode(bool pitMode)
 {
-    SendParam(TrampCommand::SetPitMode, pitMode);
+    SendParam(TrampCommand::SetPitMode, pitMode ? 0 : 1);
 }
 
 void TrampProtocolController::SendCapabilitiesQuery()
