@@ -5,7 +5,7 @@
 #include "Qmc5883L.h"
 #include "Mpu6050.h"
 #include <optional>
-#include <KalmanLib/Quaternion.hpp>
+#include <KalmanLib/MultiplicativeExtendedKalmanFilter.hpp>
 
 namespace
 {
