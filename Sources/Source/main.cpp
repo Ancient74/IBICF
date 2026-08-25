@@ -4,7 +4,7 @@
 #include "Config.h"
 #include "HalfDuplexSoftwareUart.h"
 #include "cmsis_os.h"
-#include "CrsfLink.h"
+#include "CrsfUartWriteNodes.h"
 #include <ThrustController.h>
 #include "TrampProtocol.h"
 #include <SurfaceController.h>
@@ -21,6 +21,9 @@
 #include "OsdBatteryVoltageNode.h"
 #include "PressureToAltitudeConverterNode.h"
 #include "OsdAltitudeNode.h"
+#include "CrsfLib/FrameParserNode.hpp"
+#include "CrsfFrameReaderNode.h"
+#include "CrsfFrameProcessorNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -134,7 +137,17 @@ extern "C" void main_cpp()
     batterySensor->Start();
     osdCompositorTask->StartCompositor();
 
-    CrsfLink link(huart1, model);
+    auto crsfFrameReader = std::make_shared<CrsfFrameReaderNode>();
+    auto crsfFrameParser = std::make_unique<CrsfLib::FrameParserNode>();
+    auto crsfFrameProcessor = std::make_unique<CrsfFrameProcessorNode<2>>();
+    auto crsfUart = std::make_shared<Uart>(huart1, crsfFrameReader);
+    auto crsfDeviceInfo = std::make_unique<DeviceInfoWriteNode>(crsfUart);
+
+    Connect(*crsfFrameReader, *crsfFrameParser);
+    Connect(*crsfFrameParser, *crsfFrameProcessor);
+    Connect(crsfFrameProcessor->GetDeviceInfoNode(), *crsfDeviceInfo);
+    crsfFrameReader->Start();
+
     while (true)
     {
         osDelay(1);

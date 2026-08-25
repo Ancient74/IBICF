@@ -1,18 +1,94 @@
 #pragma once
 #include "CrsfLib/Frame.hpp"
+#include "CrsfLib/FrameBuilder.hpp"
+#include "CrsfLib/FrameUnpack.hpp"
 #include <memory>
 #include "Uart.h"
-#include "FlightControllerLib/PlaneModel.hpp"
 #include "PubSubLib/Node.hpp"
 #include "KalmanLib/MultiplicativeExtendedKalmanFilter.hpp"
+#include "RcChannelsMapping.h"
 
-class CrsfFrameProcessorNode : public NodeInput<CrsfFrameProcessorNode, CrsfLib::FrameView>
+struct RcPacket
+{
+    uint32_t pitch;
+    uint32_t roll;
+    uint32_t yaw;
+    uint32_t thrust;
+    bool isArmed;
+    TriSwitchPosition vtxMode;
+};
+
+template<typename CrsfOut, uint8_t MaxSubs>
+class CrsfOutNode : public NodeOutput<CrsfOutNode<CrsfOut, MaxSubs>, CrsfOut, MaxSubs>
 {
 public:
-    explicit CrsfFrameProcessorNode(IWriter& writer, std::shared_ptr<PlaneModel> model);
+    using NodeOutput<CrsfOutNode<CrsfOut, MaxSubs>, CrsfOut, MaxSubs>::Publish;
+};
 
-    void Process(CrsfLib::FrameView frame);
+template<uint8_t MaxSubs>
+class CrsfFrameProcessorNode : public NodeInput<CrsfFrameProcessorNode<MaxSubs>, CrsfLib::FrameView>
+{
+public:
+    void Process(CrsfLib::FrameView frame)
+    {
+        switch (frame.type)
+        {
+        case CrsfLib::FrameType::ParamPingDevices:
+        {
+            CrsfLib::ParamDeviceInformationFrame paramDeviceInformationFrame{};
+            const auto buffer = CrsfLib::BuildFrame(paramDeviceInformationFrame);
+            m_deviceInfoNode.Publish(buffer);
+            break;
+        }
+        case CrsfLib::FrameType::LinkStatistics:
+        {
+            const auto linkStats = CrsfLib::Unpack<CrsfLib::LinkStatisticsFrame>(frame.payload);
+            m_linkInfo.Publish(linkStats);
+            break;
+        }
+        case CrsfLib::FrameType::RcChannelsPacked:
+        {
+            using Roll = Scaled<Channel<0>, 172, 1811, -90, 90>;
+            using Pitch = Scaled<Channel<1>, 172, 1811, -45, 45>;
+            using Yaw = Scaled<Channel<3>, 172, 1811, -45, 45>;
+            using Thrust = Scaled<Channel<2>, 172, 1811, 0, 100>;
+
+            const auto packetFrame = CrsfLib::Unpack<CrsfLib::RcChannelsPackedFrame>(frame.payload);
+            RcPacket packet{};
+            packet.thrust = Thrust::Get(packetFrame);
+            packet.pitch = Pitch::Get(packetFrame);
+            packet.yaw = Yaw::Get(packetFrame);
+            packet.roll = Roll::Get(packetFrame);
+            packet.isArmed = m_armSwitch.Update(packetFrame);
+            packet.vtxMode = m_vtxSwitch.Update(packetFrame);
+            m_rcPacketNode.Publish(packet);
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    auto& GetRcPacketNode()
+    {
+        return m_rcPacketNode;
+    }
+
+    auto& GetDeviceInfoNode()
+    {
+        return m_deviceInfoNode;
+    }
+
+    auto& GetLinkInfoNode()
+    {
+        return m_linkInfo;
+    }
+
 private:
-    IWriter& m_writer;
-    std::shared_ptr<PlaneModel> m_model = nullptr;
+    DoubleSwitch<Channel<4>> m_armSwitch{};
+    TriSwitch<Channel<5>> m_vtxSwitch{};
+
+    CrsfOutNode<RcPacket, MaxSubs> m_rcPacketNode;
+    CrsfOutNode<std::span<const uint8_t>, MaxSubs> m_deviceInfoNode;
+    CrsfOutNode<CrsfLib::LinkStatisticsFrame, MaxSubs> m_linkInfo;
 };

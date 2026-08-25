@@ -84,6 +84,7 @@ private:
     uint8_t m_confirmCount = 0;
 };
 
+enum class TriSwitchPosition : uint8_t { Low, Mid, High };
 template<typename Source,
          uint16_t LowMidBoundary = 682,
          uint16_t MidHighBoundary = 1301,
@@ -92,42 +93,41 @@ template<typename Source,
 class TriSwitch
 {
 public:
-    enum class Position : uint8_t { Low, Mid, High };
 
-    Position Update(const CrsfLib::RcChannelsPackedFrame& rc)
+    TriSwitchPosition Update(const CrsfLib::RcChannelsPackedFrame& rc)
     {
         auto value = Source::Read(rc);
 
-        Position candidate = m_state;
+        TriSwitchPosition candidate = m_state;
         bool hasCandidate = false;
 
         switch (m_state)
         {
-        case Position::Low:
+        case TriSwitchPosition::Low:
             if (value > LowMidBoundary + Margin)
             {
-                candidate = Position::Mid;
+                candidate = TriSwitchPosition::Mid;
                 hasCandidate = true;
             }
             break;
 
-        case Position::Mid:
+        case TriSwitchPosition::Mid:
             if (value < LowMidBoundary - Margin)
             {
-                candidate = Position::Low;
+                candidate = TriSwitchPosition::Low;
                 hasCandidate = true;
             }
             else if (value > MidHighBoundary + Margin)
             {
-                candidate = Position::High;
+                candidate = TriSwitchPosition::High;
                 hasCandidate = true;
             }
             break;
 
-        case Position::High:
+        case TriSwitchPosition::High:
             if (value < MidHighBoundary - Margin)
             {
-                candidate = Position::Mid;
+                candidate = TriSwitchPosition::Mid;
                 hasCandidate = true;
             }
             break;
@@ -158,10 +158,10 @@ public:
         return m_state;
     }
 
-    Position Get() const { return m_state; }
+    TriSwitchPosition Get() const { return m_state; }
 
 private:
-    Position m_state = Position::Low;
-    Position m_pendingCandidate = Position::Low;
+    TriSwitchPosition m_state = TriSwitchPosition::Low;
+    TriSwitchPosition m_pendingCandidate = TriSwitchPosition::Low;
     uint8_t m_confirmCount = 0;
 };
