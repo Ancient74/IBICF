@@ -24,6 +24,7 @@
 #include "CrsfLib/FrameParserNode.hpp"
 #include "CrsfFrameReaderNode.h"
 #include "CrsfFrameProcessorNode.h"
+#include <OsdVtxInfo.h>
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -115,7 +116,7 @@ extern "C" void main_cpp()
     auto osdController = std::make_shared<OsdController>(std::move(osdModule));
     auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController);
     auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController);
-    auto osdCompositorTask = std::make_unique<OsdCompositorTask<3>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
+    auto osdCompositorTask = std::make_unique<OsdCompositorTask<4>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
     osdCompositorTask->Register(*osdHorizonNode);
     osdCompositorTask->Register(*osdBatteryInfoNode);
 
@@ -131,9 +132,11 @@ extern "C" void main_cpp()
 
     auto swUart = std::make_unique<HalfDuplexSoftwareUart>(TRAMP_Pin, TRAMP_GPIO_Port, htim10);
     auto trampParser = std::make_unique<TrampFrameParser>("TrampFrameParser");
-    auto trampProtocolController = std::make_unique<TrampProtocolController>("TrampProtocol");
+    auto trampProtocolController = std::make_shared<TrampProtocolController>("TrampProtocol");
     Connect(*swUart, *trampParser);
     Connect(*trampProtocolController, *swUart);
+    auto osdVtxNode = std::make_unique<OsdVtxInfo>(osdController, trampProtocolController);
+    osdCompositorTask->Register(*osdVtxNode);
 
     fusion.Start();
     batterySensor->Start();
