@@ -90,7 +90,7 @@ void HalfDuplexSoftwareUart::RunTaskIteration()
     ArmExti();
 }
 
-bool HalfDuplexSoftwareUart::Write(std::span<const uint8_t> data)
+bool HalfDuplexSoftwareUart::Process(std::span<const uint8_t> data)
 {
     for(uint16_t i = 0; i < data.size(); i++)
         if (xQueueSend(m_writeQueue, &data[i], 0) != pdTRUE)

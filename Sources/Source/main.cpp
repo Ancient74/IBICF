@@ -131,7 +131,9 @@ extern "C" void main_cpp()
 
     auto swUart = std::make_unique<HalfDuplexSoftwareUart>(TRAMP_Pin, TRAMP_GPIO_Port, htim10);
     auto trampParser = std::make_unique<TrampFrameParser>("TrampFrameParser");
+    auto trampProtocolController = std::make_unique<TrampProtocolController>("TrampProtocol");
     Connect(*swUart, *trampParser);
+    Connect(*trampProtocolController, *swUart);
 
     fusion.Start();
     batterySensor->Start();
@@ -147,6 +149,7 @@ extern "C" void main_cpp()
     Connect(*crsfFrameParser, *crsfFrameProcessor);
     Connect(crsfFrameProcessor->GetDeviceInfoNode(), *crsfDeviceInfo);
     crsfFrameReader->Start();
+
 
     while (true)
     {

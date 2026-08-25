@@ -8,6 +8,7 @@
 class HalfDuplexSoftwareUart
     : public CommonTask<HalfDuplexSoftwareUart, 512, configMAX_PRIORITIES / 2 - 10>
     , public NodeOutput<HalfDuplexSoftwareUart, uint8_t, 1>
+    , public NodeInput<HalfDuplexSoftwareUart, std::span<const uint8_t>>
 {
 public:
     // timer is apb2 only
@@ -16,7 +17,7 @@ public:
 
     void RunTaskIteration();
 
-    bool Write(std::span<const uint8_t> data);
+    bool Process(std::span<const uint8_t> data);
 
     static HalfDuplexSoftwareUart* GetInstance();
     uint16_t GetPin() const;
