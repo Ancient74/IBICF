@@ -9,20 +9,14 @@ OsdController::OsdController(std::unique_ptr<OsdModule> module)
     if (!status)
         return;
     m_rows = status == InputSignalStatus::Ntsc ? 11 : 15;
-    m_cols = 29;
 
     m_module->ConfigureOutput(OutputMode::TextAndVideo, status == InputSignalStatus::Ntsc ? VideoStandard::Ntsc : VideoStandard::Pal, false, false);
-    m_module->DisplayCharacter(m_rows >> 2, m_cols >> 2, 0x8E); // Crosshair at the middle
+    m_module->DisplayCharacter(m_rows >> 2, s_cols >> 2, 0x8E); // Crosshair at the middle
 }
 
 uint8_t OsdController::Rows() const
 {
     return m_rows;
-}
-
-uint8_t OsdController::Cols() const
-{
-    return m_cols;
 }
 
 void OsdController::DrawCells(std::span<const OsdCell> cells)

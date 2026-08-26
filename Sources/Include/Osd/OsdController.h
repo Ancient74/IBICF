@@ -15,7 +15,7 @@ public:
     OsdController(std::unique_ptr<OsdModule> module);
 
     uint8_t Rows() const;
-    uint8_t Cols() const;
+    static constexpr uint8_t Cols() { return s_cols; }
 
     void DrawCells(std::span<const OsdCell> cells);
 
@@ -23,5 +23,5 @@ private:
     std::vector<OsdCell> m_lastCells;
     std::unique_ptr<OsdModule> m_module;
     uint8_t m_rows;
-    uint8_t m_cols;
+    static constexpr uint8_t s_cols = 29;
 };
