@@ -20,6 +20,7 @@
 #include "BatterySensorNode.h"
 #include "OsdBatteryVoltageNode.h"
 #include "PressureToAltitudeConverterNode.h"
+#include "PlaneControllerNode.h"
 #include "OsdAltitudeNode.h"
 #include "CrsfLib/FrameParserNode.hpp"
 #include "CrsfFrameReaderNode.h"
@@ -152,8 +153,11 @@ extern "C" void main_cpp()
     Connect(*crsfFrameParser, *crsfFrameProcessor);
     Connect(crsfFrameProcessor->GetDeviceInfoNode(), *crsfDeviceInfo);
     crsfFrameReader->Start();
+
     auto vtxControllerNode = std::make_unique<VtxControllerNode>(trampProtocolController);
+    auto planeControllerNode = std::make_unique<PlaneControllerNode>(model);
     Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
+    Connect(crsfFrameProcessor->GetRcPacketNode(), *planeControllerNode);
 
     osdCompositorTask->StartCompositor();
 
