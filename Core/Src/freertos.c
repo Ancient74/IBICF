@@ -65,6 +65,36 @@ void StartDefaultTask(void *argument);
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
+/* Hook prototypes */
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
+
+/* USER CODE BEGIN 4 */
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
+{
+  __disable_irq();
+
+  /* Enable GPIOC clock (in case it wasn't already) */
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+
+  /* Configure PC13 as general purpose output push-pull */
+  GPIOC->MODER &= ~(GPIO_MODER_MODER13);
+  GPIOC->MODER |= (GPIO_MODER_MODER13_0);   // 01 = output mode
+  GPIOC->OTYPER &= ~(GPIO_OTYPER_OT13);       // push-pull
+  GPIOC->OSPEEDR &= ~GPIO_OSPEEDR_OSPEED13;  // low speed
+
+  for (;;)
+  {
+    GPIOC->ODR ^= GPIO_ODR_OD13;   // toggle PC13
+
+    /* crude busy-wait delay - tune the count for your fast-blink rate */
+    for (volatile uint32_t i = 0; i < 500000; i++)
+    {
+        __NOP();
+    }
+  }
+}
+/* USER CODE END 4 */
+
 /**
   * @brief  FreeRTOS initialization
   * @param  None
