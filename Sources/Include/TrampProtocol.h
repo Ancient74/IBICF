@@ -98,6 +98,13 @@ private:
     uint8_t m_responseIndex = 0;
 };
 
+enum class TrampConnectionState
+{
+    Offline,
+    Handshaking,
+    Online,
+};
+
 class TrampProtocolController
     : public CommonTask<TrampProtocolController, 128, configMAX_PRIORITIES / 2>
     , public NodeInput<TrampProtocolController, TrampFrame>
@@ -117,15 +124,42 @@ public:
     std::optional<TrampCapabilities> GetCapabilities() const;
     std::optional<TrampStatus> GetStatus() const;
     std::optional<TrampTemperature> GetTemperature() const;
+    TrampConnectionState GetConnectionState() const;
 
 private:
+    struct DesiredState
+    {
+        std::optional<uint16_t> frequencyMHz;
+        std::optional<uint16_t> powerMw;
+        std::optional<bool> pitMode;
+    };
+
     void SendCapabilitiesQuery();
     void SendStatusQuery();
     void SendTemperatureQuery();
     void SendQuery(TrampCommand command);
     void SendParam(TrampCommand command, uint16_t param);
-
     void SendCommand(const TrampFrame& frame);
+
+    void ReconcileState();
+    void InvalidateStatus();
+    void MarkResponseReceived();
+    bool HasResponseTimedOut() const;
+
+    std::atomic<TrampConnectionState> m_connectionState = TrampConnectionState::Offline;
+    std::atomic<TickType_t> m_lastResponseTick = 0;
+
+    SemaphoreHandle_t m_desiredStateMutex;
+    DesiredState m_desiredState;
+
+    std::optional<uint16_t> m_lastAttemptedFrequency;
+    std::optional<uint16_t> m_lastAttemptedPower;
+    std::optional<bool> m_lastAttemptedPitMode;
+
+    uint8_t m_frequencyRetries = 0;
+    uint8_t m_powerRetries = 0;
+    uint8_t m_pitModeRetries = 0;
+
     SemaphoreHandle_t m_dataMutex;
     std::optional<TrampCapabilities> m_capabilities;
     std::optional<TrampStatus> m_status;

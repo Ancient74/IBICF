@@ -15,6 +15,8 @@ namespace Config
     constexpr uint32_t SOFTWARE_UART_READ_TIMEOUT_MS = 200;
 
     constexpr uint32_t TRAMP_PROTOCOL_POLLING_RATE_MS = 200;
+    constexpr uint8_t TRAMP_PROTOCOL_MAX_SET_RETRIES = 20;
+    constexpr uint32_t TRAMP_PROTOCOL_RESPONSE_TIMEOUT_MS = TRAMP_PROTOCOL_POLLING_RATE_MS * 5;
 
     constexpr uint16_t VTX_PIT_MODE_POWER = 25;
     constexpr uint16_t VTX_MID_POS_POWER = 1000;

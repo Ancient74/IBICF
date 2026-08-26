@@ -105,10 +105,10 @@ void TrampFrameParser::RunTaskIteration()
         break;
     }
 }
-
 TrampProtocolController::TrampProtocolController(const char* taskName)
     : CommonTask<TrampProtocolController, 128, configMAX_PRIORITIES / 2>(taskName, pdMS_TO_TICKS(Config::TRAMP_PROTOCOL_POLLING_RATE_MS))
 {
+    m_desiredStateMutex = xSemaphoreCreateMutex();
     m_dataMutex = xSemaphoreCreateMutex();
     Start();
 }
@@ -116,31 +116,46 @@ TrampProtocolController::TrampProtocolController(const char* taskName)
 TrampProtocolController::~TrampProtocolController()
 {
     Stop();
+    vSemaphoreDelete(m_desiredStateMutex);
     vSemaphoreDelete(m_dataMutex);
 }
 
-void TrampProtocolController::RunTaskIteration()
+void TrampProtocolController::MarkResponseReceived()
 {
-    bool hasCapabilities = false;
-    xSemaphoreTake(m_dataMutex, portMAX_DELAY);
-    hasCapabilities = m_capabilities.has_value();
-    xSemaphoreGive(m_dataMutex);
+    m_lastResponseTick.store(xTaskGetTickCount());
+}
 
-    if (!hasCapabilities)
-        SendCapabilitiesQuery();
-    SendStatusQuery();
+bool TrampProtocolController::HasResponseTimedOut() const
+{
+    return (xTaskGetTickCount() - m_lastResponseTick.load()) > pdMS_TO_TICKS(Config::TRAMP_PROTOCOL_RESPONSE_TIMEOUT_MS);
+}
+
+void TrampProtocolController::InvalidateStatus()
+{
+    xSemaphoreTake(m_dataMutex, portMAX_DELAY);
+    m_status.reset();
+    xSemaphoreGive(m_dataMutex);
 }
 
 void TrampProtocolController::Process(const TrampFrame& frame)
 {
+    if (frame.checksum != TrampChecksum(frame))
+        return; // corrupt frame
+
+    MarkResponseReceived();
+
     xSemaphoreTake(m_dataMutex, portMAX_DELAY);
     switch (static_cast<TrampCommand>(frame.command))
     {
     case TrampCommand::Capabilities:
         m_capabilities = ExtractPayload<TrampCapabilities>(frame.response);
+        if (m_connectionState.load() == TrampConnectionState::Offline)
+            m_connectionState.store(TrampConnectionState::Handshaking);
         break;
     case TrampCommand::Status:
         m_status = ExtractPayload<TrampStatus>(frame.response);
+        if (m_connectionState.load() == TrampConnectionState::Handshaking)
+            m_connectionState.store(TrampConnectionState::Online);
         break;
     case TrampCommand::Temperature:
         m_temperature = ExtractPayload<TrampTemperature>(frame.response);
@@ -149,6 +164,132 @@ void TrampProtocolController::Process(const TrampFrame& frame)
         break;
     }
     xSemaphoreGive(m_dataMutex);
+}
+
+void TrampProtocolController::RunTaskIteration()
+{
+    if (m_connectionState.load() != TrampConnectionState::Offline && HasResponseTimedOut())
+    {
+        m_connectionState.store(TrampConnectionState::Offline);
+        InvalidateStatus();
+        m_frequencyRetries = m_powerRetries = m_pitModeRetries = 0;
+        m_lastAttemptedFrequency.reset();
+        m_lastAttemptedPower.reset();
+        m_lastAttemptedPitMode.reset();
+    }
+
+    switch (m_connectionState.load())
+    {
+    case TrampConnectionState::Offline:
+        SendCapabilitiesQuery();
+        break;
+    case TrampConnectionState::Handshaking:
+        SendStatusQuery();
+        break;
+    case TrampConnectionState::Online:
+        ReconcileState();
+        break;
+    }
+}
+
+void TrampProtocolController::ReconcileState()
+{
+    std::optional<TrampStatus> currentStatus;
+    xSemaphoreTake(m_dataMutex, portMAX_DELAY);
+    currentStatus = m_status;
+    xSemaphoreGive(m_dataMutex);
+
+    if (!currentStatus.has_value())
+    {
+        SendStatusQuery();
+        return;
+    }
+
+    DesiredState desired;
+    xSemaphoreTake(m_desiredStateMutex, portMAX_DELAY);
+    desired = m_desiredState;
+    xSemaphoreGive(m_desiredStateMutex);
+
+    if (desired.frequencyMHz.has_value() && *desired.frequencyMHz != currentStatus->freqMHz)
+    {
+        if (m_lastAttemptedFrequency != desired.frequencyMHz)
+        {
+            m_lastAttemptedFrequency = desired.frequencyMHz;
+            m_frequencyRetries = 0;
+        }
+        if (m_frequencyRetries < Config::TRAMP_PROTOCOL_MAX_SET_RETRIES)
+        {
+            SendParam(TrampCommand::SetFrequency, *desired.frequencyMHz);
+            m_frequencyRetries++;
+            InvalidateStatus();
+        }
+        return;
+    }
+    m_frequencyRetries = 0;
+    m_lastAttemptedFrequency.reset();
+
+    if (desired.powerMw.has_value() && *desired.powerMw != currentStatus->configuredPowerMw)
+    {
+        if (m_lastAttemptedPower != desired.powerMw)
+        {
+            m_lastAttemptedPower = desired.powerMw;
+            m_powerRetries = 0;
+        }
+        if (m_powerRetries < Config::TRAMP_PROTOCOL_MAX_SET_RETRIES)
+        {
+            SendParam(TrampCommand::SetPower, *desired.powerMw);
+            m_powerRetries++;
+            InvalidateStatus();
+        }
+        return;
+    }
+    m_powerRetries = 0;
+    m_lastAttemptedPower.reset();
+
+    if (desired.pitMode.has_value())
+    {
+        const bool currentPit = currentStatus->pitMode != 0;
+        if (*desired.pitMode != currentPit)
+        {
+            if (m_lastAttemptedPitMode != desired.pitMode)
+            {
+                m_lastAttemptedPitMode = desired.pitMode;
+                m_pitModeRetries = 0;
+            }
+            if (m_pitModeRetries < Config::TRAMP_PROTOCOL_MAX_SET_RETRIES)
+            {
+                SendParam(TrampCommand::SetPitMode, *desired.pitMode ? 0 : 1);
+                m_pitModeRetries++;
+                InvalidateStatus();
+            }
+            return;
+        }
+    }
+    m_pitModeRetries = 0;
+    m_lastAttemptedPitMode.reset();
+
+    SendStatusQuery();
+}
+
+void TrampProtocolController::SetFrequency(uint16_t frequency)
+{
+    xSemaphoreTake(m_desiredStateMutex, portMAX_DELAY);
+    m_desiredState.frequencyMHz = frequency;
+    xSemaphoreGive(m_desiredStateMutex);
+}
+
+void TrampProtocolController::SetPower(uint16_t power)
+{
+    xSemaphoreTake(m_desiredStateMutex, portMAX_DELAY);
+    m_desiredState.powerMw = power;
+    xSemaphoreGive(m_desiredStateMutex);
+}
+
+void TrampProtocolController::SetPitMode(bool pitMode)
+{
+    xSemaphoreTake(m_desiredStateMutex, portMAX_DELAY);
+    m_desiredState.pitMode = pitMode;
+    xSemaphoreGive(m_desiredStateMutex);
 }
 
 std::optional<TrampCapabilities> TrampProtocolController::GetCapabilities() const
@@ -175,19 +316,9 @@ std::optional<TrampTemperature> TrampProtocolController::GetTemperature() const
     return value;
 }
 
-void TrampProtocolController::SetFrequency(uint16_t frequency)
+TrampConnectionState TrampProtocolController::GetConnectionState() const
 {
-    SendParam(TrampCommand::SetFrequency, frequency);
-}
-
-void TrampProtocolController::SetPower(uint16_t power)
-{
-    SendParam(TrampCommand::SetPower, power);
-}
-
-void TrampProtocolController::SetPitMode(bool pitMode)
-{
-    SendParam(TrampCommand::SetPitMode, pitMode ? 0 : 1);
+    return m_connectionState.load();
 }
 
 void TrampProtocolController::SendCapabilitiesQuery()
@@ -205,6 +336,16 @@ void TrampProtocolController::SendTemperatureQuery()
     SendQuery(TrampCommand::Temperature);
 }
 
+void TrampProtocolController::SendQuery(TrampCommand command)
+{
+    if (command != TrampCommand::Capabilities && command != TrampCommand::Status && command != TrampCommand::Temperature)
+        return;
+    TrampFrame frame{};
+    frame.command = static_cast<uint8_t>(command);
+    frame.checksum = TrampChecksum(frame);
+    SendCommand(frame);
+}
+
 void TrampProtocolController::SendParam(TrampCommand command, uint16_t param)
 {
     if (command != TrampCommand::SetFrequency && command != TrampCommand::SetPitMode && command != TrampCommand::SetPower)
@@ -212,16 +353,6 @@ void TrampProtocolController::SendParam(TrampCommand command, uint16_t param)
     TrampFrame frame{};
     frame.command = static_cast<uint8_t>(command);
     frame.parameter.value = param;
-    frame.checksum = TrampChecksum(frame);
-    SendCommand(frame);
-}
-
-void TrampProtocolController::SendQuery(TrampCommand command)
-{
-    if (command != TrampCommand::Capabilities && command != TrampCommand::Status && command != TrampCommand::Temperature)
-        return;
-    TrampFrame frame{};
-    frame.command = static_cast<uint8_t>(command);
     frame.checksum = TrampChecksum(frame);
     SendCommand(frame);
 }
