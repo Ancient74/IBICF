@@ -5,6 +5,7 @@
 #include "HalfDuplexSoftwareUart.h"
 #include "cmsis_os.h"
 #include "CrsfUartWriteNodes.h"
+#include "CruiseFlightMode.h"
 #include <ThrustController.h>
 #include "TrampProtocol.h"
 #include <SurfaceController.h>
@@ -70,7 +71,7 @@ extern "C" void main_cpp()
     mpuSensor->Calibrate(accelR, N);
     auto mpuNode = std::make_unique<SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1>>(std::move(mpuSensor), "MPU");
     auto mpuFilterNode = std::make_unique<EmaFilterNode<GyroscopeAccelerometer, 1>>(0.1f, 5);
-    SensorFusionNode<1> fusion{1.0f / samplingRate, accelR, magnetR, N};
+    SensorFusionNode<2> fusion{1.0f / samplingRate, accelR, magnetR, N};
 
     Connect(*mpuNode, *mpuFilterNode);
     Connect(*mpuFilterNode, fusion.ImuInput());
@@ -124,12 +125,15 @@ extern "C" void main_cpp()
 
     auto lowPosFlightMode = std::make_unique<ManualFlightMode>();
     auto midPosFlightMode = std::make_unique<ManualFlightMode>();
-    auto highPosFlightMode = std::make_unique<ManualFlightMode>();
+    auto highPosFlightMode = std::make_unique<CruiseFlightMode>("CruiseFlightMode");
+
+    Connect(fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(*highPosFlightMode));
 
     if (altitudeNode)
     {
         osdAltitudeNode = std::make_unique<OsdAltitudeNode>(osdController);
         Connect(*altitudeNode, *osdAltitudeNode);
+        Connect(*altitudeNode, static_cast<NodeInput<CruiseFlightMode, float>&>(*highPosFlightMode));
         osdCompositorTask->Register(*osdAltitudeNode);
     }
 

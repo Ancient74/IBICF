@@ -21,4 +21,24 @@ namespace Config
     constexpr uint16_t VTX_PIT_MODE_POWER = 25;
     constexpr uint16_t VTX_MID_POS_POWER = 1000;
     constexpr uint16_t VTX_HIGH_POS_POWER = 2000;
+
+    constexpr uint8_t CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ = 200;
+
+    constexpr float ROLL_Kp = 1.2f;
+    constexpr float ROLL_Ki = 0.0f;
+    constexpr float ROLL_Kd = 0.15f;
+    constexpr float ROLL_OutMin = -30.0f;
+    constexpr float ROLL_OutMax = 30.0f;
+    constexpr float ROLL_IntMin = -10.0f;
+    constexpr float ROLL_IntMax = 10.0f;
+
+    constexpr float ALT_Kp = 0.8f;
+    constexpr float ALT_Ki = 0.0f;
+    constexpr float ALT_Kd = 1.5f;
+    constexpr float ALT_OutMin = -15.0f;
+    constexpr float ALT_OutMax = 15.0f;
+    constexpr float ALT_IntMin = -5.0f;
+    constexpr float ALT_IntMax = 5.0f;
+
+    constexpr float CRUISE_TRIM_PITCH_DEG = 3.0f;
 }
