@@ -1,14 +1,50 @@
 #include "PlaneControllerNode.h"
 
-PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model)
-        : m_model(std::move(model))
-{}
+namespace
+{
+    PitchRollYaw FromRcPacket(const RcPacket& packet)
+    {
+        return { .pitch = packet.pitch, .roll = packet.roll, .yaw = packet.yaw };
+    }
+}
+
+PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model
+    , std::unique_ptr<IFlightMode> lowPosFlightMode
+    , std::unique_ptr<IFlightMode> midPosFlightMode
+    , std::unique_ptr<IFlightMode> highPosFlightMode)
+    : m_isInitialized(false)
+    , m_currentFlightMode(nullptr)
+    , m_lowPosFlightMode(std::move(lowPosFlightMode))
+    , m_midPosFlightMode(std::move(midPosFlightMode))
+    , m_highPosFlightMode(std::move(highPosFlightMode))
+    , m_model(std::move(model))
+{
+}
 
 void PlaneControllerNode::Process(const RcPacket& packet)
 {
-    m_model->Pitch(packet.pitch);
-    m_model->Roll(packet.roll);
-    m_model->Yaw(packet.yaw);
+    switch (packet.flightMode)
+    {
+    case TriSwitchPosition::Low:
+        if (m_currentFlightMode != m_lowPosFlightMode.get())
+            m_currentFlightMode = m_lowPosFlightMode.get();
+        break;
+    case TriSwitchPosition::Mid:
+        if (m_currentFlightMode != m_midPosFlightMode.get())
+            m_currentFlightMode = m_midPosFlightMode.get();
+        break;
+    case TriSwitchPosition::High:
+        if (m_currentFlightMode != m_highPosFlightMode.get())
+            m_currentFlightMode = m_highPosFlightMode.get();
+        break;
+
+    default:
+        break;
+    }
+    auto controlCommands = m_currentFlightMode->Translate(FromRcPacket(packet));
+    m_model->Pitch(controlCommands.pitch);
+    m_model->Roll(controlCommands.roll);
+    m_model->Yaw(controlCommands.yaw);
 
     if (!m_isInitialized && packet.isArmed)
     {

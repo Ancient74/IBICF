@@ -16,6 +16,7 @@ struct RcPacket
     uint32_t thrust;
     bool isArmed;
     TriSwitchPosition vtxMode;
+    TriSwitchPosition flightMode;
 };
 
 template<typename CrsfOut, uint8_t MaxSubs>
@@ -61,6 +62,7 @@ public:
             packet.roll = Roll::Get(packetFrame);
             packet.isArmed = m_armSwitch.Update(packetFrame);
             packet.vtxMode = m_vtxSwitch.Update(packetFrame);
+            packet.flightMode = m_flightModeSwitch.Update(packetFrame);
             m_rcPacketNode.Publish(packet);
             break;
         }
@@ -87,6 +89,7 @@ public:
 private:
     DoubleSwitch<Channel<4>> m_armSwitch{};
     TriSwitch<Channel<5>> m_vtxSwitch{};
+    TriSwitch<Channel<6>> m_flightModeSwitch{};
 
     CrsfOutNode<RcPacket, MaxSubs> m_rcPacketNode;
     CrsfOutNode<std::span<const uint8_t>, MaxSubs> m_deviceInfoNode;

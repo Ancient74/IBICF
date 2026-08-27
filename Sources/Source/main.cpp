@@ -122,6 +122,10 @@ extern "C" void main_cpp()
     osdCompositorTask->Register(*osdHorizonNode);
     osdCompositorTask->Register(*osdBatteryInfoNode);
 
+    auto lowPosFlightMode = std::make_unique<ManualFlightMode>();
+    auto midPosFlightMode = std::make_unique<ManualFlightMode>();
+    auto highPosFlightMode = std::make_unique<ManualFlightMode>();
+
     if (altitudeNode)
     {
         osdAltitudeNode = std::make_unique<OsdAltitudeNode>(osdController);
@@ -155,7 +159,7 @@ extern "C" void main_cpp()
     crsfFrameReader->Start();
 
     auto vtxControllerNode = std::make_unique<VtxControllerNode>(trampProtocolController);
-    auto planeControllerNode = std::make_unique<PlaneControllerNode>(model);
+    auto planeControllerNode = std::make_unique<PlaneControllerNode>(model, std::move(lowPosFlightMode), std::move(midPosFlightMode), std::move(highPosFlightMode));
     Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
     Connect(crsfFrameProcessor->GetRcPacketNode(), *planeControllerNode);
 
