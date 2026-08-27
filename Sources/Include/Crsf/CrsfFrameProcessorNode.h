@@ -10,10 +10,10 @@
 
 struct RcPacket
 {
-    uint32_t pitch;
-    uint32_t roll;
-    uint32_t yaw;
-    uint32_t thrust;
+    int32_t pitch;
+    int32_t roll;
+    int32_t yaw;
+    int32_t thrust;
     bool isArmed;
     TriSwitchPosition vtxMode;
     TriSwitchPosition flightMode;
