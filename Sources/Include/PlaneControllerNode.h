@@ -5,7 +5,9 @@
 #include "FlightMode.h"
 #include <memory>
 
-class PlaneControllerNode : public NodeInput<PlaneControllerNode, RcPacket>
+class PlaneControllerNode
+    : public NodeInput<PlaneControllerNode, RcPacket>
+    , public NodeOutput<PlaneControllerNode, std::span<const char>, 1>
 {
 public:
     PlaneControllerNode(std::shared_ptr<PlaneModel> model

@@ -23,6 +23,7 @@
 #include "PressureToAltitudeConverterNode.h"
 #include "PlaneControllerNode.h"
 #include "OsdAltitudeNode.h"
+#include "OsdFlightModeNode.h"
 #include "CrsfLib/FrameParserNode.hpp"
 #include "CrsfFrameReaderNode.h"
 #include "CrsfFrameProcessorNode.h"
@@ -119,9 +120,12 @@ extern "C" void main_cpp()
     auto osdController = std::make_shared<OsdController>(std::move(osdModule));
     auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController);
     auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController);
-    auto osdCompositorTask = std::make_unique<OsdCompositorTask<4>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
+    auto osdFlightModeNode = std::make_unique<OsdFlightModeNode>(osdController);
+
+    auto osdCompositorTask = std::make_unique<OsdCompositorTask<5>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
     osdCompositorTask->Register(*osdHorizonNode);
     osdCompositorTask->Register(*osdBatteryInfoNode);
+    osdCompositorTask->Register(*osdFlightModeNode);
 
     auto lowPosFlightMode = std::make_unique<ManualFlightMode>();
     auto midPosFlightMode = std::make_unique<ManualFlightMode>();
@@ -166,6 +170,7 @@ extern "C" void main_cpp()
     auto planeControllerNode = std::make_unique<PlaneControllerNode>(model, std::move(lowPosFlightMode), std::move(midPosFlightMode), std::move(highPosFlightMode));
     Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
     Connect(crsfFrameProcessor->GetRcPacketNode(), *planeControllerNode);
+    Connect(*planeControllerNode, *osdFlightModeNode);
 
     osdCompositorTask->StartCompositor();
 

@@ -1,4 +1,6 @@
 #include "PlaneControllerNode.h"
+#include <cstring>
+#include <span>
 
 namespace
 {
@@ -23,23 +25,38 @@ PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model
 
 void PlaneControllerNode::Process(const RcPacket& packet)
 {
+    bool flightModeChanged = false;
     switch (packet.flightMode)
     {
     case TriSwitchPosition::Low:
         if (m_currentFlightMode != m_lowPosFlightMode.get())
+        {
             m_currentFlightMode = m_lowPosFlightMode.get();
+            flightModeChanged = true;
+        }
         break;
     case TriSwitchPosition::Mid:
         if (m_currentFlightMode != m_midPosFlightMode.get())
+        {
             m_currentFlightMode = m_midPosFlightMode.get();
+            flightModeChanged = true;
+        }
         break;
     case TriSwitchPosition::High:
         if (m_currentFlightMode != m_highPosFlightMode.get())
+        {
             m_currentFlightMode = m_highPosFlightMode.get();
+            flightModeChanged = true;
+        }
         break;
 
     default:
         break;
+    }
+    if (flightModeChanged)
+    {
+        const char* name = m_currentFlightMode->GetName();
+        Publish(std::span<const char>(name, std::strlen(name)));
     }
     auto controlCommands = m_currentFlightMode->Translate(FromRcPacket(packet));
     m_model->Pitch(controlCommands.pitch);

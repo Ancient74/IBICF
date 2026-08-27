@@ -1,6 +1,5 @@
 #include "CruiseFlightMode.h"
 #include <projdefs.h>
-#include "Config.h"
 
 CruiseFlightMode::CruiseFlightMode(const char* taskName)
     : CruiseFlightMode::Base(taskName, pdMS_TO_TICKS(1000 / Config::CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ))
@@ -41,6 +40,11 @@ PitchRollYaw CruiseFlightMode::Translate(const PitchRollYaw& pitchRollYaw)
     out.pitch = static_cast<int32_t>(std::roundf(m_pitchCommandDeg.load()));
     out.yaw = 0;
     return out;
+}
+
+const char* CruiseFlightMode::GetName() const
+{
+    return "CRUISE";
 }
 
 void CruiseFlightMode::Process(const Quaternion<float>& quat)

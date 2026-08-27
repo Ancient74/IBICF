@@ -4,6 +4,7 @@
 #include "KalmanLib/Quaternion.hpp"
 #include "PubSubLib/Node.hpp"
 #include "KalmanLib/PidController.hpp"
+#include "Config.h"
 
 class CruiseFlightMode
     : public IFlightMode
@@ -21,6 +22,8 @@ public:
     void OnExit() override;
 
     PitchRollYaw Translate(const PitchRollYaw& pitchRollYaw) override;
+
+    const char* GetName() const override;
 
     void Process(const Quaternion<float>& quat);
     void Process(float altitude);
