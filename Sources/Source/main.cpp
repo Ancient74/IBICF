@@ -174,10 +174,7 @@ extern "C" void main_cpp()
 
     osdCompositorTask->StartCompositor();
 
-    while (true)
-    {
-        osDelay(1);
-    }
+    vTaskDelete(nullptr);
 }
 
 
