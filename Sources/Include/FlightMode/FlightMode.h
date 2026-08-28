@@ -1,18 +1,19 @@
 #pragma once
 #include <cstdint>
 
-struct PitchRollYaw
+struct PitchRollYawThrust
 {
     int32_t pitch;
     int32_t roll;
     int32_t yaw;
+    int32_t thrust;
 };
 
 class IFlightMode
 {
 public:
     virtual ~IFlightMode() = default;
-    virtual PitchRollYaw Translate(const PitchRollYaw& command) = 0;
+    virtual PitchRollYawThrust Translate(const PitchRollYawThrust& command) = 0;
     virtual void OnEnter() = 0;
     virtual void OnExit() = 0;
     virtual const char* GetName() const = 0;
@@ -21,7 +22,7 @@ public:
 class ManualFlightMode : public IFlightMode
 {
 public:
-    PitchRollYaw Translate(const PitchRollYaw& command) override;
+    PitchRollYawThrust Translate(const PitchRollYawThrust& command) override;
     void OnEnter() override {};
     void OnExit() override {};
     const char* GetName() const override;

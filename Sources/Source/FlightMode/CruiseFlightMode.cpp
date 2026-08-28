@@ -33,12 +33,13 @@ void CruiseFlightMode::OnExit()
     Stop();
 }
 
-PitchRollYaw CruiseFlightMode::Translate(const PitchRollYaw& pitchRollYaw)
+PitchRollYawThrust CruiseFlightMode::Translate(const PitchRollYawThrust& pitchRollYaw)
 {
-    PitchRollYaw out;
+    PitchRollYawThrust out;
     out.roll = static_cast<int32_t>(std::roundf(m_rollCommandDeg.load()));
     out.pitch = static_cast<int32_t>(std::roundf(m_pitchCommandDeg.load()));
     out.yaw = 0;
+    out.thrust = pitchRollYaw.thrust;
     return out;
 }
 

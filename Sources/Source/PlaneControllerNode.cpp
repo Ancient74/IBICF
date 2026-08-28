@@ -1,12 +1,13 @@
 #include "PlaneControllerNode.h"
+#include "FlightMode.h"
 #include <cstring>
 #include <span>
 
 namespace
 {
-    PitchRollYaw FromRcPacket(const RcPacket& packet)
+    PitchRollYawThrust FromRcPacket(const RcPacket& packet)
     {
-        return { .pitch = packet.pitch, .roll = packet.roll, .yaw = packet.yaw };
+        return { .pitch = packet.pitch, .roll = packet.roll, .yaw = packet.yaw, .thrust = packet.thrust };
     }
 }
 
@@ -69,6 +70,6 @@ void PlaneControllerNode::Process(const RcPacket& packet)
         return;
     }
     m_isInitialized = true;
-    uint8_t allowedThrust = packet.isArmed ? static_cast<uint8_t>(packet.thrust) : 0;
+    uint8_t allowedThrust = packet.isArmed ? static_cast<uint8_t>(controlCommands.thrust) : 0;
     m_model->Thrust(allowedThrust);
 }

@@ -21,7 +21,7 @@ public:
     void OnEnter() override;
     void OnExit() override;
 
-    PitchRollYaw Translate(const PitchRollYaw& pitchRollYaw) override;
+    PitchRollYawThrust Translate(const PitchRollYawThrust& pitchRollYaw) override;
 
     const char* GetName() const override;
 

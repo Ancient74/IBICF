@@ -1,6 +1,6 @@
 #include "FlightMode.h"
 
-PitchRollYaw ManualFlightMode::Translate(const PitchRollYaw& command)
+PitchRollYawThrust ManualFlightMode::Translate(const PitchRollYawThrust& command)
 {
     return command;
 }
