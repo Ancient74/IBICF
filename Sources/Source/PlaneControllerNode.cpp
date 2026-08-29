@@ -32,6 +32,7 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     case TriSwitchPosition::Low:
         if (m_currentFlightMode != m_lowPosFlightMode.get())
         {
+            m_currentFlightMode->OnExit();
             m_currentFlightMode = m_lowPosFlightMode.get();
             flightModeChanged = true;
         }
@@ -39,6 +40,7 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     case TriSwitchPosition::Mid:
         if (m_currentFlightMode != m_midPosFlightMode.get())
         {
+            m_currentFlightMode->OnExit();
             m_currentFlightMode = m_midPosFlightMode.get();
             flightModeChanged = true;
         }
@@ -46,6 +48,7 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     case TriSwitchPosition::High:
         if (m_currentFlightMode != m_highPosFlightMode.get())
         {
+            m_currentFlightMode->OnExit();
             m_currentFlightMode = m_highPosFlightMode.get();
             flightModeChanged = true;
         }
@@ -57,6 +60,7 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     if (flightModeChanged)
     {
         const char* name = m_currentFlightMode->GetName();
+        m_currentFlightMode->OnEnter();
         Publish(std::span<const char>(name, std::strlen(name)));
     }
     auto controlCommands = m_currentFlightMode->Translate(FromRcPacket(packet));
