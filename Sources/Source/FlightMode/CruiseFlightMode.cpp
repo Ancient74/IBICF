@@ -25,6 +25,8 @@ CruiseFlightMode::CruiseFlightMode(const char* taskName)
 void CruiseFlightMode::OnEnter()
 {
     m_desiredAlt = m_currentAlt;
+    m_altPid.Reset();
+    m_rollPid.Reset();
     Start();
 }
 
