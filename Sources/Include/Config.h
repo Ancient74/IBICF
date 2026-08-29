@@ -41,4 +41,9 @@ namespace Config
     constexpr float ALT_IntMax = 5.0f;
 
     constexpr float CRUISE_TRIM_PITCH_DEG = 3.0f;
+
+    constexpr uint32_t FAILSAFE_LINK_TIMEOUT_MS = 3000;
+    constexpr int32_t  FAILSAFE_HOLD_THRUST = 30;
+    constexpr uint32_t RC_LINK_TIMEOUT_MS = 400;
+    constexpr uint32_t FAILSAFE_OUTPUT_PUSH_PERIOD_MS = 20;
 }

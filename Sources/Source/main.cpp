@@ -2,6 +2,7 @@
 #include "AdcSensor.h"
 #include "BME280.h"
 #include "Config.h"
+#include "FailsafeFlightMode.h"
 #include "HalfDuplexSoftwareUart.h"
 #include "cmsis_os.h"
 #include "CrsfUartWriteNodes.h"
@@ -130,6 +131,7 @@ extern "C" void main_cpp()
     auto lowPosFlightMode = std::make_unique<ManualFlightMode>();
     auto midPosFlightMode = std::make_unique<ManualFlightMode>();
     auto highPosFlightMode = std::make_unique<CruiseFlightMode>("CruiseFlightMode");
+    auto failsafeFlightMode = std::make_unique<FailsafeFlightMode>("FailSafeMode");
 
     Connect(fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(*highPosFlightMode));
 
@@ -167,7 +169,11 @@ extern "C" void main_cpp()
     crsfFrameReader->Start();
 
     auto vtxControllerNode = std::make_unique<VtxControllerNode>(trampProtocolController);
-    auto planeControllerNode = std::make_unique<PlaneControllerNode>(model, std::move(lowPosFlightMode), std::move(midPosFlightMode), std::move(highPosFlightMode));
+    auto planeControllerNode = std::make_unique<PlaneControllerNode>(model
+        , std::move(lowPosFlightMode)
+        , std::move(midPosFlightMode)
+        , std::move(highPosFlightMode)
+        , std::move(failsafeFlightMode));
     Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
     Connect(crsfFrameProcessor->GetRcPacketNode(), *planeControllerNode);
     Connect(*planeControllerNode, *osdFlightModeNode);

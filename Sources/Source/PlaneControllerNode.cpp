@@ -2,6 +2,7 @@
 #include "FlightMode.h"
 #include <cstring>
 #include <span>
+#include "Config.h"
 
 namespace
 {
@@ -14,42 +15,93 @@ namespace
 PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model
     , std::unique_ptr<IFlightMode> lowPosFlightMode
     , std::unique_ptr<IFlightMode> midPosFlightMode
-    , std::unique_ptr<IFlightMode> highPosFlightMode)
+    , std::unique_ptr<IFlightMode> highPosFlightMode
+    , std::unique_ptr<IFlightMode> failSafeFlightMode)
     : m_isInitialized(false)
     , m_currentFlightMode(nullptr)
     , m_lowPosFlightMode(std::move(lowPosFlightMode))
     , m_midPosFlightMode(std::move(midPosFlightMode))
     , m_highPosFlightMode(std::move(highPosFlightMode))
+    , m_failSafeFlightMode(std::move(failSafeFlightMode))
     , m_model(std::move(model))
 {
+    m_watchdogTimer = xTimerCreate("RcWatchdog",
+        pdMS_TO_TICKS(Config::RC_LINK_TIMEOUT_MS),
+        pdFALSE, this, &PlaneControllerNode::WatchdogCallback);
+
+    m_outputPushTimer = xTimerCreate("FailsafeOutputPush",
+        pdMS_TO_TICKS(Config::FAILSAFE_OUTPUT_PUSH_PERIOD_MS),
+        pdTRUE, this, &PlaneControllerNode::OutputPushCallback);
+}
+
+void PlaneControllerNode::WatchdogCallback(TimerHandle_t timer)
+{
+    static_cast<PlaneControllerNode*>(pvTimerGetTimerID(timer))->OnLinkLost();
+}
+
+void PlaneControllerNode::OnLinkLost()
+{
+    m_currentFlightMode.store(m_failSafeFlightMode.get());
+    const char* name = m_failSafeFlightMode->GetName();
+    Publish(std::span<const char>(name, std::strlen(name)));
+    xTimerStart(m_outputPushTimer, 0);
+}
+
+void PlaneControllerNode::OutputPushCallback(TimerHandle_t timer)
+{
+    static_cast<PlaneControllerNode*>(pvTimerGetTimerID(timer))->PushFailsafeOutputs();
+}
+
+void PlaneControllerNode::PushFailsafeOutputs()
+{
+    if (!m_isInitialized.load())
+    {
+        return;
+    }
+    auto* mode = m_currentFlightMode.load();
+    auto controlCommands = mode->Translate({});
+    m_model->Pitch(controlCommands.pitch);
+    m_model->Roll(controlCommands.roll);
+    m_model->Yaw(controlCommands.yaw);
+    m_model->Thrust(static_cast<uint8_t>(controlCommands.thrust));
 }
 
 void PlaneControllerNode::Process(const RcPacket& packet)
 {
+    xTimerReset(m_watchdogTimer, 0);
+    if (xTimerIsTimerActive(m_outputPushTimer))
+    {
+        xTimerStop(m_outputPushTimer, 0);
+    }
+
     bool flightModeChanged = false;
+    auto* currentFlightMode = m_currentFlightMode.load();
     switch (packet.flightMode)
     {
     case TriSwitchPosition::Low:
-        if (m_currentFlightMode != m_lowPosFlightMode.get())
+        if (currentFlightMode != m_lowPosFlightMode.get())
         {
-            m_currentFlightMode->OnExit();
-            m_currentFlightMode = m_lowPosFlightMode.get();
+            if (currentFlightMode != nullptr)
+                currentFlightMode->OnExit();
+            m_currentFlightMode.store(m_lowPosFlightMode.get());
             flightModeChanged = true;
         }
         break;
     case TriSwitchPosition::Mid:
-        if (m_currentFlightMode != m_midPosFlightMode.get())
+        if (currentFlightMode != m_midPosFlightMode.get())
         {
-            m_currentFlightMode->OnExit();
-            m_currentFlightMode = m_midPosFlightMode.get();
+            if (currentFlightMode != nullptr)
+                currentFlightMode->OnExit();
+            m_currentFlightMode.store(m_midPosFlightMode.get());
             flightModeChanged = true;
         }
         break;
     case TriSwitchPosition::High:
-        if (m_currentFlightMode != m_highPosFlightMode.get())
+        if (currentFlightMode != m_highPosFlightMode.get())
         {
-            m_currentFlightMode->OnExit();
-            m_currentFlightMode = m_highPosFlightMode.get();
+            if (currentFlightMode != nullptr)
+                currentFlightMode->OnExit();
+            m_currentFlightMode.store(m_highPosFlightMode.get());
             flightModeChanged = true;
         }
         break;
@@ -59,11 +111,12 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     }
     if (flightModeChanged)
     {
-        const char* name = m_currentFlightMode->GetName();
-        m_currentFlightMode->OnEnter();
+        currentFlightMode = m_currentFlightMode.load();
+        const char* name = currentFlightMode->GetName();
+        currentFlightMode->OnEnter();
         Publish(std::span<const char>(name, std::strlen(name)));
     }
-    auto controlCommands = m_currentFlightMode->Translate(FromRcPacket(packet));
+    auto controlCommands = m_currentFlightMode.load()->Translate(FromRcPacket(packet));
     m_model->Pitch(controlCommands.pitch);
     m_model->Roll(controlCommands.roll);
     m_model->Yaw(controlCommands.yaw);
