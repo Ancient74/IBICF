@@ -30,6 +30,12 @@ public:
         return std::clamp(output, m_outputMin, m_outputMax);
     }
 
+    void Reset()
+    {
+        m_integral = 0.0f;
+        m_prevError = 0.0f;
+    }
+
 private:
     float m_kp;
     float m_ki;
