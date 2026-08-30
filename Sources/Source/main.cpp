@@ -30,6 +30,7 @@
 #include "CrsfFrameProcessorNode.h"
 #include <OsdVtxInfo.h>
 #include "VtxControllerNode.h"
+#include <OsdRcLinkNode.h>
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -122,11 +123,13 @@ extern "C" void main_cpp()
     auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController);
     auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController);
     auto osdFlightModeNode = std::make_unique<OsdFlightModeNode>(osdController);
+    auto osdRcLinkNode = std::make_unique<OsdRcLinkNode>(osdController);
 
-    auto osdCompositorTask = std::make_unique<OsdCompositorTask<5>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
+    auto osdCompositorTask = std::make_unique<OsdCompositorTask<6>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
     osdCompositorTask->Register(*osdHorizonNode);
     osdCompositorTask->Register(*osdBatteryInfoNode);
     osdCompositorTask->Register(*osdFlightModeNode);
+    osdCompositorTask->Register(*osdRcLinkNode);
 
     auto lowPosFlightMode = std::make_unique<ManualFlightMode>();
     auto midPosFlightMode = std::make_unique<ManualFlightMode>();
@@ -176,6 +179,7 @@ extern "C" void main_cpp()
         , std::move(failsafeFlightMode));
     Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
     Connect(crsfFrameProcessor->GetRcPacketNode(), *planeControllerNode);
+    Connect(crsfFrameProcessor->GetLinkInfoNode(), *osdRcLinkNode);
     Connect(*planeControllerNode, *osdFlightModeNode);
 
     osdCompositorTask->StartCompositor();
