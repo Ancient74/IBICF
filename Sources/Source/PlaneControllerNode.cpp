@@ -18,6 +18,7 @@ PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model
     , std::unique_ptr<IFlightMode> highPosFlightMode
     , std::unique_ptr<IFlightMode> failSafeFlightMode)
     : m_isInitialized(false)
+    , m_isArmed(false)
     , m_currentFlightMode(nullptr)
     , m_lowPosFlightMode(std::move(lowPosFlightMode))
     , m_midPosFlightMode(std::move(midPosFlightMode))
@@ -41,7 +42,15 @@ void PlaneControllerNode::WatchdogCallback(TimerHandle_t timer)
 
 void PlaneControllerNode::OnLinkLost()
 {
+    if (!m_isArmed.load())
+        return;
+
+    auto* previousMode = m_currentFlightMode.load();
+    if (previousMode != nullptr)
+        previousMode->OnExit();
     m_currentFlightMode.store(m_failSafeFlightMode.get());
+    m_failSafeFlightMode->OnEnter();
+
     const char* name = m_failSafeFlightMode->GetName();
     Publish(std::span<const char>(name, std::strlen(name)));
     xTimerStart(m_outputPushTimer, 0);
@@ -55,9 +64,7 @@ void PlaneControllerNode::OutputPushCallback(TimerHandle_t timer)
 void PlaneControllerNode::PushFailsafeOutputs()
 {
     if (!m_isInitialized.load())
-    {
         return;
-    }
     auto* mode = m_currentFlightMode.load();
     auto controlCommands = mode->Translate({});
     m_model->Pitch(controlCommands.pitch);
@@ -73,7 +80,7 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     {
         xTimerStop(m_outputPushTimer, 0);
     }
-
+    m_isArmed.store(packet.isArmed);
     bool flightModeChanged = false;
     auto* currentFlightMode = m_currentFlightMode.load();
     switch (packet.flightMode)

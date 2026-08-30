@@ -27,6 +27,7 @@ private:
     void PushFailsafeOutputs();
 
     std::atomic<bool> m_isInitialized;
+    std::atomic<bool> m_isArmed;
     std::atomic<IFlightMode*> m_currentFlightMode;
     std::unique_ptr<IFlightMode> m_lowPosFlightMode;
     std::unique_ptr<IFlightMode> m_midPosFlightMode;
