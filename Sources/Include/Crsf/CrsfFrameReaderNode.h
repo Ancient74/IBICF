@@ -10,7 +10,7 @@
 
 class CrsfFrameReaderNode
     : public IReader
-    , public CommonTask<CrsfFrameReaderNode, 512, configMAX_PRIORITIES - 2>
+    , public CommonTask<CrsfFrameReaderNode, 512, configMAX_PRIORITIES - 2, false>
     , public NodeOutput<CrsfFrameReaderNode, uint8_t, 1>
 {
 public:

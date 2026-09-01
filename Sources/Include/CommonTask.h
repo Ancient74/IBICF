@@ -6,7 +6,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-template<typename Derived, uint16_t StackDepth, UBaseType_t Priority>
+template<typename Derived, uint16_t StackDepth, UBaseType_t Priority, bool Periodic = true>
 class CommonTask
 {
 public:
@@ -62,7 +62,8 @@ private:
         while (!self->m_isFinishing.load(std::memory_order_acquire))
         {
             derived->RunTaskIteration();
-            vTaskDelayUntil(&lastWakeTime, self->m_period);
+            if constexpr (Periodic)
+                vTaskDelayUntil(&lastWakeTime, self->m_period);
         }
 
         xSemaphoreGive(self->m_doneSem);

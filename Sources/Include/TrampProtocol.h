@@ -71,7 +71,7 @@ static_assert(sizeof(TrampTemperature) == 10);
 #pragma pack(pop)
 
 class TrampFrameParser
-    : public CommonTask<TrampFrameParser, 64, configMAX_PRIORITIES / 2>
+    : public CommonTask<TrampFrameParser, 64, configMAX_PRIORITIES / 2, false>
     , public NodeInput<TrampFrameParser, uint8_t>
     , public NodeOutput<TrampFrameParser, TrampFrame, 1>
 {

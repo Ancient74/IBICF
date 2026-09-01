@@ -25,7 +25,7 @@ namespace
 }
 
 TrampFrameParser::TrampFrameParser(const char* taskName)
-    : CommonTask<TrampFrameParser, 64, configMAX_PRIORITIES / 2>(taskName, 0)
+    : CommonTask<TrampFrameParser, 64, configMAX_PRIORITIES / 2, false>(taskName, 0)
 {
     m_inputQueue = xQueueCreate(sizeof(TrampFrame) * 2, sizeof(uint8_t)); // enough to hold 2 frames
     Start();
