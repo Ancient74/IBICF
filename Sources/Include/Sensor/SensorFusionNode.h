@@ -94,8 +94,8 @@ public:
 
     using OutputType = Quaternion<float>;
 
-    SensorFusionNode(float nominalDt, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
-        : CommonTask<SensorFusionNode, 128, configMAX_PRIORITIES / 2 - 4>("Fusion", 0)
+    SensorFusionNode(const char* taskName, float nominalDt, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
+        : CommonTask<SensorFusionNode, 128, configMAX_PRIORITIES / 2 - 4>(taskName, 0)
         , m_core(accelR, magnetR, N), m_nominalDt(nominalDt)
     {
         m_sampleQueue = xQueueCreate(queueLength, sizeof(FusionSample));

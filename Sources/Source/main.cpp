@@ -74,10 +74,10 @@ extern "C" void main_cpp()
     mpuSensor->Calibrate(accelR, N);
     auto mpuNode = std::make_unique<SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1>>(std::move(mpuSensor), "MPU");
     auto mpuFilterNode = std::make_unique<EmaFilterNode<GyroscopeAccelerometer, 1>>(0.1f, 5);
-    SensorFusionNode<2> fusion{1.0f / samplingRate, accelR, magnetR, N};
+    auto fusion = std::make_unique<SensorFusionNode<2>>("Fusion", 1.0f / samplingRate, accelR, magnetR, N);
 
     Connect(*mpuNode, *mpuFilterNode);
-    Connect(*mpuFilterNode, fusion.ImuInput());
+    Connect(*mpuFilterNode, fusion->ImuInput());
 
     std::unique_ptr<Qmc5883L> qmcSensor = nullptr;
     std::unique_ptr<SensorSamplingNode<Qmc5883L, Magnetometer, 1>> qmcNode = nullptr;
@@ -92,7 +92,7 @@ extern "C" void main_cpp()
         qmcFilterNode = std::make_unique<EmaFilterNode<Magnetometer, 1>>(0.1f, 1);
 
         Connect(*qmcNode, *qmcFilterNode);
-        Connect(*qmcFilterNode, fusion.MagInput());
+        Connect(*qmcFilterNode, fusion->MagInput());
         qmcNode->Start();
     }
     mpuNode->Start();
@@ -136,7 +136,7 @@ extern "C" void main_cpp()
     auto highPosFlightMode = std::make_unique<CruiseFlightMode>("CruiseFlightMode");
     auto failsafeFlightMode = std::make_unique<FailsafeFlightMode>("FailSafeMode");
 
-    Connect(fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(*highPosFlightMode));
+    Connect(*fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(*highPosFlightMode));
 
     if (altitudeNode)
     {
@@ -146,7 +146,7 @@ extern "C" void main_cpp()
         osdCompositorTask->Register(*osdAltitudeNode);
     }
 
-    Connect(fusion, *osdHorizonNode);
+    Connect(*fusion, *osdHorizonNode);
     Connect(*batterySensor, *osdBatteryInfoNode);
 
     auto swUart = std::make_unique<HalfDuplexSoftwareUart>(TRAMP_Pin, TRAMP_GPIO_Port, htim10);
@@ -157,7 +157,7 @@ extern "C" void main_cpp()
     auto osdVtxNode = std::make_unique<OsdVtxInfo>(osdController, trampProtocolController);
     osdCompositorTask->Register(*osdVtxNode);
 
-    fusion.Start();
+    fusion->Start();
     batterySensor->Start();
 
     auto crsfFrameReader = std::make_shared<CrsfFrameReaderNode>("CrsfReader");
