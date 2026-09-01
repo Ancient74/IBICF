@@ -2,7 +2,7 @@
 #include "Config.h"
 
 CrsfFrameReaderNode::CrsfFrameReaderNode(const char* taskName)
-    : CommonTask<CrsfFrameReaderNode, 128, configMAX_PRIORITIES - 2, false>(taskName, 0)
+    : CommonTask<CrsfFrameReaderNode, 128, configMAX_PRIORITIES / 2 - 2, false>(taskName, 0)
 {
     m_streamBuffer = xStreamBufferCreate(/*size*/ 256, /*trigger*/ 1);
 }
