@@ -27,7 +27,8 @@ public:
     const char* GetName() const override;
 
 private:
-    std::atomic<Attitude> m_currentAtt;
+    std::atomic<float> m_currentRollRad = 0.0f;
+    std::atomic<float> m_currentPitchRad = 0.0f;
     PidController m_rollPid;
 
     TickType_t m_failsafeEnteredTick = 0;

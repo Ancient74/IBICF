@@ -52,7 +52,9 @@ const char* CruiseFlightMode::GetName() const
 
 void CruiseFlightMode::Process(const Quaternion<float>& quat)
 {
-    m_currentAtt = quat.ToAttitude();
+    const auto attitude = quat.ToAttitude();
+    m_currentRollRad.store(attitude.rollRad);
+    m_currentPitchRad.store(attitude.pitchRad);
 }
 
 void CruiseFlightMode::Process(float altitude)
@@ -62,11 +64,11 @@ void CruiseFlightMode::Process(float altitude)
 
 void CruiseFlightMode::RunTaskIteration()
 {
-    auto att = m_currentAtt.load();
+    const float rollRad = m_currentRollRad.load();
     constexpr float dt = 1.0f / static_cast<float>(Config::CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ);
     constexpr float RadToDeg = 180.0f / static_cast<float>(M_PI);
 
-    const float rollErrorDeg = -att.rollRad * RadToDeg;
+    const float rollErrorDeg = -rollRad * RadToDeg;
     const float rollCommandDeg = m_rollPid.Update(rollErrorDeg, dt);
 
     const float altErrorM = m_desiredAlt - m_currentAlt;

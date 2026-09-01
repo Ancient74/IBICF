@@ -31,7 +31,8 @@ public:
     void RunTaskIteration();
 
 private:
-    std::atomic<Attitude> m_currentAtt;
+    std::atomic<float> m_currentRollRad = 0.0f;
+    std::atomic<float> m_currentPitchRad = 0.0f;
     std::atomic<float> m_currentAlt;
 
     float m_desiredAlt;
