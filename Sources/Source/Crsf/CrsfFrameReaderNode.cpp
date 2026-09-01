@@ -1,7 +1,7 @@
 #include "CrsfFrameReaderNode.h"
 
 CrsfFrameReaderNode::CrsfFrameReaderNode()
-    : CommonTask<CrsfFrameReaderNode, 512, configMAX_PRIORITIES - 2, false>("CrsfByteTask", 0)
+    : CommonTask<CrsfFrameReaderNode, 128, configMAX_PRIORITIES - 2, false>("CrsfByteTask", 0)
 {
     m_streamBuffer = xStreamBufferCreate(/*size*/ 256, /*trigger*/ 1);
 }

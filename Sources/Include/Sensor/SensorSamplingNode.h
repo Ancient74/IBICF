@@ -11,9 +11,9 @@ template<typename SensorT, typename SensorOutputT, uint8_t MaxSubs>
 requires SensorDevice<SensorT, SensorOutputT>
 class SensorSamplingNode
     : public NodeOutput<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, SensorOutputT, MaxSubs>
-    , public CommonTask<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, 512, configMAX_PRIORITIES / 2>
+    , public CommonTask<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, 128, configMAX_PRIORITIES / 2>
 {
-    using Base = CommonTask<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, 512, configMAX_PRIORITIES / 2>;
+    using Base = CommonTask<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, 128, configMAX_PRIORITIES / 2>;
 
 public:
     using OutputType = SensorOutputT;

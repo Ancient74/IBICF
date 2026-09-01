@@ -17,9 +17,9 @@ struct BatteryInfo
 template<float MaxBatteryVoltage, float AdcInMaxVoltage>
 class BatterySensorNode
     : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, BatteryInfo, 1>
-    , public CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 512, configMAX_PRIORITIES / 2 - 2>
+    , public CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2>
 {
-    using Base = CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 512, configMAX_PRIORITIES / 2 - 2>;
+    using Base = CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2>;
 
 public:
     BatterySensorNode(std::unique_ptr<AdcSensor> adcSensor, const char* taskName, uint32_t samplingRateHz)

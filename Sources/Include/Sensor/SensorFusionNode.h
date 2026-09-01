@@ -74,7 +74,7 @@ private:
 template<uint8_t MaxSubs>
 class SensorFusionNode
     : public NodeOutput<SensorFusionNode<MaxSubs>, Quaternion<float>, MaxSubs>
-    , public CommonTask<SensorFusionNode<MaxSubs>, 512, configMAX_PRIORITIES / 2 + 1>
+    , public CommonTask<SensorFusionNode<MaxSubs>, 128, configMAX_PRIORITIES / 2 + 1>
 {
 public:
     struct ImuPort : NodeInput<ImuPort, GyroscopeAccelerometer>
@@ -95,7 +95,7 @@ public:
     using OutputType = Quaternion<float>;
 
     SensorFusionNode(float nominalDt, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
-        : CommonTask<SensorFusionNode, 512, configMAX_PRIORITIES / 2 + 1>("Fusion", 0)
+        : CommonTask<SensorFusionNode, 128, configMAX_PRIORITIES / 2 + 1>("Fusion", 0)
         , m_core(accelR, magnetR, N), m_nominalDt(nominalDt)
     {
         m_sampleQueue = xQueueCreate(queueLength, sizeof(FusionSample));
