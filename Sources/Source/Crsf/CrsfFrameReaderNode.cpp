@@ -1,4 +1,5 @@
 #include "CrsfFrameReaderNode.h"
+#include "Config.h"
 
 CrsfFrameReaderNode::CrsfFrameReaderNode(const char* taskName)
     : CommonTask<CrsfFrameReaderNode, 128, configMAX_PRIORITIES - 2, false>(taskName, 0)
@@ -22,7 +23,7 @@ void CrsfFrameReaderNode::RunTaskIteration()
 {
     uint8_t chunk[32];
     size_t n = xStreamBufferReceive(m_streamBuffer,
-        chunk, sizeof(chunk), portMAX_DELAY);
+        chunk, sizeof(chunk), pdMS_TO_TICKS(Config::CRSF_READER_TIMEOUT_MS));
     for (size_t i = 0; i < n; ++i)
         Publish(chunk[i]);
 }
