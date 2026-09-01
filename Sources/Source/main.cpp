@@ -45,8 +45,8 @@ extern "C" void main_cpp()
 {
     auto leftAileronControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_1, 500us, 2500us);
     auto rightAileronControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_2, 500us, 2500us);
-    auto leftRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_3, 1000us, 2000us);
-    auto rightRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_4, 1000us, 2000us);
+    auto leftRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_3, 500us, 2500us);
+    auto rightRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_4, 500us, 2500us);
 
     auto thrust = std::make_unique<ThrustController>(htim3, TIM_CHANNEL_1);
 
@@ -186,5 +186,3 @@ extern "C" void main_cpp()
 
     vTaskDelete(nullptr);
 }
-
-
