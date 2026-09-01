@@ -160,7 +160,7 @@ extern "C" void main_cpp()
     fusion.Start();
     batterySensor->Start();
 
-    auto crsfFrameReader = std::make_shared<CrsfFrameReaderNode>();
+    auto crsfFrameReader = std::make_shared<CrsfFrameReaderNode>("CrsfReader");
     auto crsfFrameParser = std::make_unique<CrsfLib::FrameParserNode>();
     auto crsfFrameProcessor = std::make_unique<CrsfFrameProcessorNode<2>>();
     auto crsfUart = std::make_shared<Uart>(huart1, crsfFrameReader);

@@ -14,7 +14,7 @@ class CrsfFrameReaderNode
     , public NodeOutput<CrsfFrameReaderNode, uint8_t, 1>
 {
 public:
-    CrsfFrameReaderNode();
+    CrsfFrameReaderNode(const char* taskName);
     ~CrsfFrameReaderNode();
     void OnByte(uint8_t byte) override;
 
