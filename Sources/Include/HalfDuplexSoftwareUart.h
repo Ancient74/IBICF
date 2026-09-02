@@ -1,9 +1,11 @@
 #pragma once
 #include <stdint.h>
 #include "CommonTask.h"
+#include "FreeRTOS.h"
 #include "PubSubLib/Node.hpp"
 #include <span>
 #include <stm32f4xx_hal.h>
+#include "Config.h"
 
 class HalfDuplexSoftwareUart
     : public CommonTask<HalfDuplexSoftwareUart, 128, configMAX_PRIORITIES / 2 - 10>
@@ -30,7 +32,11 @@ private:
     void ArmExti();
 
     QueueHandle_t m_writeQueue;
-    QueueHandle_t m_readingSemaphore;
+    StaticQueue_t m_writeQueueBuffer;
+    uint8_t m_writeQueueStorage[Config::SW_UART_QUEUE_SIZE];
+
+    SemaphoreHandle_t m_readingSemaphore;
+    StaticSemaphore_t m_readingSemaphoreBuffer;
 
     uint16_t m_pin;
     GPIO_TypeDef* m_port;

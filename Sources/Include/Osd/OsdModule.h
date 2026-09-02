@@ -4,6 +4,9 @@
 #include <memory>
 #include <span>
 #include <string_view>
+#include "Config.h"
+#include "FreeRTOS.h"
+#include "queue.h"
 #include "Uart.h"
 #include "optional"
 #include <vector>
@@ -218,6 +221,8 @@ public:
 
 private:
     osMessageQueueId_t m_queue;
+    StaticQueue_t m_queueBuffer{};
+    uint8_t m_queueStorage[Config::OSD_RESPONSE_READER_QUEUE_SIZE];
 };
 
 class OsdModule

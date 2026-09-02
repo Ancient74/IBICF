@@ -37,4 +37,6 @@ private:
 
     TimerHandle_t m_watchdogTimer = nullptr;
     TimerHandle_t m_outputPushTimer = nullptr;
+    StaticTimer_t m_watchdogTimerBuffer{};
+    StaticTimer_t m_outputPushTimerBuffer{};
 };

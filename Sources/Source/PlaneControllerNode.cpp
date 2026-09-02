@@ -26,13 +26,17 @@ PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model
     , m_failSafeFlightMode(std::move(failSafeFlightMode))
     , m_model(std::move(model))
 {
-    m_watchdogTimer = xTimerCreate("RcWatchdog",
+    m_watchdogTimer = xTimerCreateStatic("RcWatchdog",
         pdMS_TO_TICKS(Config::RC_LINK_TIMEOUT_MS),
-        pdFALSE, this, &PlaneControllerNode::WatchdogCallback);
+        pdFALSE, this, &PlaneControllerNode::WatchdogCallback,
+        &m_watchdogTimerBuffer);
+    configASSERT(m_watchdogTimer != nullptr);
 
-    m_outputPushTimer = xTimerCreate("FailsafeOutputPush",
+    m_outputPushTimer = xTimerCreateStatic("FailsafeOutputPush",
         pdMS_TO_TICKS(Config::FAILSAFE_OUTPUT_PUSH_PERIOD_MS),
-        pdTRUE, this, &PlaneControllerNode::OutputPushCallback);
+        pdTRUE, this, &PlaneControllerNode::OutputPushCallback,
+        &m_outputPushTimerBuffer);
+    configASSERT(m_outputPushTimer != nullptr);
 }
 
 void PlaneControllerNode::WatchdogCallback(TimerHandle_t timer)

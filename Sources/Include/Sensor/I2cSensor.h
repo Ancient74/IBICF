@@ -35,6 +35,7 @@ public:
 private:
     I2C_HandleTypeDef& m_i2c;
     SemaphoreHandle_t m_mutex;
+    StaticSemaphore_t m_mutexBuffer{};
 };
 
 class I2cSensor

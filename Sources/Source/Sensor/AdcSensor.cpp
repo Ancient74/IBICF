@@ -54,7 +54,7 @@ AdcSensor::AdcSensor(ADC_HandleTypeDef& handle, uint32_t channel)
     , m_channel(channel)
 {
     configASSERT(s_instance == nullptr && "AdcSensor is a singleton");
-    configASSERT((m_completeSem = xSemaphoreCreateBinary()) != nullptr);
+    configASSERT((m_completeSem = xSemaphoreCreateBinaryStatic(&m_completeSemBuffer)) != nullptr);
     s_instance = this;
 }
 

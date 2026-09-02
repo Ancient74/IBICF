@@ -11,7 +11,14 @@ namespace
 
 OsdResponseReader::OsdResponseReader()
 {
-    m_queue = osMessageQueueNew(QueueDepthBytes, sizeof(uint8_t), nullptr);
+    const osMessageQueueAttr_t queueAttributes = {
+        .name = "OsdResponseReader",
+        .cb_mem = &m_queueBuffer,
+        .cb_size = sizeof(m_queueBuffer),
+        .mq_mem = m_queueStorage,
+        .mq_size = sizeof(m_queueStorage),
+    };
+    m_queue = osMessageQueueNew(QueueDepthBytes, sizeof(uint8_t), &queueAttributes);
 }
 
 OsdResponseReader::~OsdResponseReader()

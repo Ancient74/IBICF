@@ -14,7 +14,7 @@ I2cBusLock::~I2cBusLock()
 I2cBus::I2cBus(I2C_HandleTypeDef& i2c)
     : m_i2c(i2c)
 {
-    m_mutex = xSemaphoreCreateMutex();
+    m_mutex = xSemaphoreCreateMutexStatic(&m_mutexBuffer);
     configASSERT(m_mutex);
 }
 

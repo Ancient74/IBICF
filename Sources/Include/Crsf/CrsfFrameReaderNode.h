@@ -7,6 +7,7 @@
 #include <queue.h>
 #include <stream_buffer.h>
 #include <PubSubLib/Node.hpp>
+#include "Config.h"
 
 class CrsfFrameReaderNode
     : public IReader
@@ -21,4 +22,6 @@ public:
     void RunTaskIteration();
 private:
     StreamBufferHandle_t m_streamBuffer;
+    StaticStreamBuffer_t m_streamBufferBuffer;
+    uint8_t m_buffer[Config::CRSF_READER_BUFFER_SIZE];
 };

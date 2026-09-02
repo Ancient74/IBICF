@@ -1,4 +1,5 @@
 #include "HalfDuplexSoftwareUart.h"
+#include "CommonTask.h"
 #include "Config.h"
 #include "projdefs.h"
 #include "stm32f4xx_hal_gpio.h"
@@ -6,8 +7,6 @@
 
 namespace
 {
-    constexpr uint16_t QUEUE_SIZE = 256;
-
     uint32_t GetApb2TimerClockFreq()
     {
         uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
@@ -35,8 +34,9 @@ HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port,
 {
     if (!s_instance)
         s_instance = this;
-    m_writeQueue = xQueueCreate(QUEUE_SIZE, sizeof(uint8_t));
-    m_readingSemaphore = xSemaphoreCreateBinary();
+    m_writeQueue = xQueueCreateStatic(Config::SW_UART_QUEUE_SIZE, sizeof(uint8_t), m_writeQueueStorage, &m_writeQueueBuffer);
+    configASSERT(m_writeQueue != nullptr);
+    m_readingSemaphore = xSemaphoreCreateBinaryStatic(&m_readingSemaphoreBuffer);
     HAL_TIM_Base_Start(&m_timer);
     Start();
 }

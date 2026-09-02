@@ -93,6 +93,8 @@ private:
         Footer
     } m_state = TrampFrameParser::State::SyncFrame;
     QueueHandle_t m_inputQueue;
+    StaticQueue_t m_inputQueueBuffer;
+    uint8_t m_inputQueueStorage[sizeof(TrampFrame) * 2];
     TrampFrame m_pendingFrame{};
     uint8_t m_parameterIndex = 0;
     uint8_t m_responseIndex = 0;
@@ -150,6 +152,8 @@ private:
     std::atomic<TickType_t> m_lastResponseTick = 0;
 
     SemaphoreHandle_t m_desiredStateMutex;
+    StaticSemaphore_t m_desiredStateBuffer;
+
     DesiredState m_desiredState;
 
     std::optional<uint16_t> m_lastAttemptedFrequency;
@@ -161,6 +165,8 @@ private:
     uint8_t m_pitModeRetries = 0;
 
     SemaphoreHandle_t m_dataMutex;
+    StaticSemaphore_t m_dataBuffer;
+
     std::optional<TrampCapabilities> m_capabilities;
     std::optional<TrampStatus> m_status;
     std::optional<TrampTemperature> m_temperature;

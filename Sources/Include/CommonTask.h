@@ -5,6 +5,7 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "task.h"
 
 template<typename Derived, uint16_t StackDepth, UBaseType_t Priority, bool Periodic = true>
 class CommonTask
@@ -34,8 +35,13 @@ public:
         });
 
         m_isFinishing.store(false, std::memory_order_relaxed); // allow restart
-        configASSERT((m_doneSem = xSemaphoreCreateBinary()) != nullptr);
-        configASSERT(xTaskCreate(&CommonTask::TaskLoop, m_taskName, StackDepth, this, Priority, &m_task) == pdPASS);
+
+        m_doneSem = xSemaphoreCreateBinaryStatic(&m_semBuffer);
+        configASSERT(m_doneSem != nullptr);
+
+        m_task = xTaskCreateStatic(&CommonTask::TaskLoop, m_taskName, StackDepth,
+                                    this, Priority, m_stack, &m_taskTCB);
+        configASSERT(m_task != nullptr);
     }
 
 protected:
@@ -74,6 +80,10 @@ private:
     TickType_t m_period;
     TaskHandle_t m_task{};
     SemaphoreHandle_t m_doneSem{};
-    std::atomic_bool m_isFinishing{false};
-    std::atomic_bool m_started{false};
+    std::atomic_bool m_isFinishing = false;
+    std::atomic_bool m_started =false;
+
+    alignas(portBYTE_ALIGNMENT) StackType_t m_stack[StackDepth]{};
+    StaticTask_t m_taskTCB{};
+    StaticSemaphore_t m_semBuffer{};
 };

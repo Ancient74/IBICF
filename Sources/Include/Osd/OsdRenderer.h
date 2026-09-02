@@ -19,7 +19,7 @@ public:
         static_assert(requires(Derived& r, RenderingData data) {
             { r.Render(data) } -> std::same_as<void>;
         });
-        m_mutex = xSemaphoreCreateMutex();
+        m_mutex = xSemaphoreCreateMutexStatic(&m_mutexBuffer);
         configASSERT(m_mutex != nullptr);
     }
 
@@ -64,5 +64,6 @@ private:
     std::shared_ptr<OsdController> m_osd;
     std::optional<RenderingData> m_latestData{};
     SemaphoreHandle_t m_mutex{};
+    StaticSemaphore_t m_mutexBuffer{};
     std::atomic_bool m_enabled{true};
 };

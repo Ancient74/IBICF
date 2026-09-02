@@ -31,6 +31,7 @@ private:
 
     ADC_HandleTypeDef& m_handle;
     SemaphoreHandle_t m_completeSem{};
+    StaticSemaphore_t m_completeSemBuffer{};
     std::atomic_bool m_error{false};
 
     uint32_t m_channel;

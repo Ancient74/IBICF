@@ -9,8 +9,6 @@
 
 namespace
 {
-    constexpr UBaseType_t queueLength = 16;
-
     // Tagged sample posted by the sampling tasks and consumed by the fusion task.
     struct FusionSample
     {
@@ -98,7 +96,7 @@ public:
         : CommonTask<SensorFusionNode, 128, configMAX_PRIORITIES / 2 - 4>(taskName, 0)
         , m_core(accelR, magnetR, N), m_nominalDt(nominalDt)
     {
-        m_sampleQueue = xQueueCreate(queueLength, sizeof(FusionSample));
+        m_sampleQueue = xQueueCreateStatic(Config::SENSOR_FUSION_NODE_QUEUE_SIZE, sizeof(FusionSample), m_sampleQueueStorage, &m_sampleQueueBuffer);
         configASSERT(m_sampleQueue != nullptr);
     }
 
@@ -170,6 +168,9 @@ private:
     TickType_t m_lastTick{};
     bool m_hasLastTick{false};
     QueueHandle_t m_sampleQueue{};
+    StaticQueue_t m_sampleQueueBuffer{};
+    uint8_t m_sampleQueueStorage[Config::SENSOR_FUSION_NODE_QUEUE_SIZE * sizeof(FusionSample)]{};
+
     std::optional<Magnetometer> m_latestMag{};
 
     FusionCore m_core;

@@ -1,4 +1,5 @@
 #include "TrampProtocol.h"
+#include "CommonTask.h"
 #include "Config.h"
 #include <span>
 #include <cstring>
@@ -27,7 +28,8 @@ namespace
 TrampFrameParser::TrampFrameParser(const char* taskName)
     : CommonTask<TrampFrameParser, 64, configMAX_PRIORITIES / 2, false>(taskName, 0)
 {
-    m_inputQueue = xQueueCreate(sizeof(TrampFrame) * 2, sizeof(uint8_t)); // enough to hold 2 frames
+    m_inputQueue = xQueueCreateStatic(sizeof(m_inputQueueStorage), sizeof(uint8_t), m_inputQueueStorage, &m_inputQueueBuffer);
+    configASSERT(m_inputQueue != nullptr);
     Start();
 }
 
@@ -105,11 +107,12 @@ void TrampFrameParser::RunTaskIteration()
         break;
     }
 }
+
 TrampProtocolController::TrampProtocolController(const char* taskName)
     : CommonTask<TrampProtocolController, 128, configMAX_PRIORITIES / 2>(taskName, pdMS_TO_TICKS(Config::TRAMP_PROTOCOL_POLLING_RATE_MS))
 {
-    m_desiredStateMutex = xSemaphoreCreateMutex();
-    m_dataMutex = xSemaphoreCreateMutex();
+    m_desiredStateMutex = xSemaphoreCreateMutexStatic(&m_desiredStateBuffer);
+    m_dataMutex = xSemaphoreCreateMutexStatic(&m_dataBuffer);
     Start();
 }
 
