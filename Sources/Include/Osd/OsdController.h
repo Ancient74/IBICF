@@ -23,5 +23,5 @@ private:
     std::vector<OsdCell> m_lastCells;
     std::unique_ptr<OsdModule> m_module;
     uint8_t m_rows;
-    static constexpr uint8_t s_cols = 29;
+    static constexpr uint8_t s_cols = Config::OSD_COLS;
 };

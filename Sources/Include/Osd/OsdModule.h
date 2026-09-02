@@ -205,7 +205,7 @@ class IOsdResponseReader
 {
 public:
     virtual ~IOsdResponseReader() = default;
-    virtual std::optional<std::vector<uint8_t>> ReadBytes(size_t byteCount, uint32_t timeoutMs) = 0;
+    virtual bool ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs) = 0;
 };
 
 class OsdResponseReader : public IReader, public IOsdResponseReader
@@ -216,7 +216,7 @@ public:
 
     void OnByte(uint8_t byte) override;
 
-    std::optional<std::vector<uint8_t>> ReadBytes(size_t byteCount, uint32_t timeoutMs);
+    bool ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs) override;
 
 private:
     QueueHandle_t m_queue;

@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <vector>
 
 OsdResponseReader::OsdResponseReader()
 {
@@ -22,19 +21,14 @@ void OsdResponseReader::OnByte(uint8_t byte)
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
-std::optional<std::vector<uint8_t>> OsdResponseReader::ReadBytes(size_t byteCount, uint32_t timeoutMs)
+bool OsdResponseReader::ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs)
 {
-    std::vector<uint8_t> result;
-    result.reserve(byteCount);
-    for (size_t i = 0; i < byteCount; i++)
+    for (auto& byte : buffer)
     {
-        uint8_t byte = 0;
         if (xQueueReceive(m_queue, &byte, pdMS_TO_TICKS(timeoutMs)) != pdTRUE)
-            return std::nullopt;
-
-        result.push_back(byte);
+            return false;
     }
-    return result;
+    return true;
 }
 
 OsdModule::OsdModule(std::unique_ptr<IWriter> writer, std::shared_ptr<IOsdResponseReader> reader)
@@ -102,28 +96,28 @@ void OsdModule::DisplayCharacter(uint8_t row, uint8_t column, uint8_t characterC
 
 void OsdModule::DisplayLine(uint8_t row, uint8_t column, std::string_view text)
 {
-    // `text` must already be Cp1251 (Windows-1251) encoded — this is a raw byte
-    // copy, not a transcode from UTF-8.
-    std::vector<uint8_t> argument;
-    argument.reserve(2 + text.size() + 1);
-    argument.push_back(row);
-    argument.push_back(column);
-    argument.insert(argument.end(), text.begin(), text.end());
-    argument.push_back(0x00); // terminating byte required by the protocol
-    WriteCommand(0xA5, argument);
+    assert(text.size() <= Config::OSD_MAX_TEXT_SIZE);
+
+    std::array<uint8_t, 2 + Config::OSD_MAX_TEXT_SIZE + 1> argument{};
+    argument[0] = row;
+    argument[1] = column;
+    std::copy(text.begin(), text.end(), argument.begin() + 2);
+    argument[2 + text.size()] = 0x00; // terminating byte required by the protocol
+
+    WriteCommand(0xA5, std::span<const uint8_t>(argument.data(), 2 + text.size() + 1));
 }
 
 void OsdModule::DisplayUnformattedLine(uint8_t row, uint8_t column, std::string_view text)
 {
-    // Same encoding caveat as DisplayLine. \n and \t are NOT special here —
-    // they're written out as ordinary character codes.
-    std::vector<uint8_t> argument;
-    argument.reserve(2 + text.size() + 1);
-    argument.push_back(row);
-    argument.push_back(column);
-    argument.insert(argument.end(), text.begin(), text.end());
-    argument.push_back(0x00);
-    WriteCommand(0xA6, argument);
+    assert(text.size() <= Config::OSD_MAX_TEXT_SIZE);
+
+    std::array<uint8_t, 2 + Config::OSD_MAX_TEXT_SIZE + 1> argument{};
+    argument[0] = row;
+    argument[1] = column;
+    std::copy(text.begin(), text.end(), argument.begin() + 2);
+    argument[2 + text.size()] = 0x00;
+
+    WriteCommand(0xA6, std::span<const uint8_t>(argument.data(), 2 + text.size() + 1));
 }
 
 void OsdModule::ClearScreen()
@@ -209,17 +203,18 @@ void OsdModule::RestoreDefaultSettings(bool restoreOutputParams, bool restoreUar
 
 std::optional<uint8_t> OsdModule::SaveCommandSequence(std::span<const uint8_t> commandSequence, uint32_t timeoutMs)
 {
-    std::vector<uint8_t> argument(commandSequence.begin(), commandSequence.end());
-    argument.push_back(0x00);
+    assert(commandSequence.size() + 1 <= Config::OSD_MODULE_COMMAND_SEQUENCE_SIZE);
 
-    WriteCommand(0xAE, argument);
+    std::array<uint8_t, Config::OSD_MODULE_COMMAND_SEQUENCE_SIZE> argument{};
+    std::copy(commandSequence.begin(), commandSequence.end(), argument.begin());
+    argument[commandSequence.size()] = 0x00;
 
-    auto response = m_reader->ReadBytes(1, timeoutMs);
-    if (!response)
-    {
+    WriteCommand(0xAE, std::span<const uint8_t>(argument.data(), commandSequence.size() + 1));
+
+    uint8_t response = 0;
+    if (!m_reader->ReadBytes({&response, 1}, timeoutMs))
         return std::nullopt;
-    }
-    return response->at(0);
+    return response;
 }
 
 void OsdModule::ExecuteCommandSequence(uint8_t sequenceNumber)
@@ -247,13 +242,10 @@ std::optional<InputSignalStatus> OsdModule::GetInputSignalStatus(uint32_t timeou
 {
     WriteCommand(0xAB, {});
 
-    auto response = m_reader->ReadBytes(1, timeoutMs);
-    if (!response)
-    {
+    uint8_t status = 0;
+    if (!m_reader->ReadBytes({&status, 1}, timeoutMs))
         return std::nullopt;
-    }
 
-    const uint8_t status = response->at(0);
     switch (static_cast<InputSignalStatus>(status))
     {
         case InputSignalStatus::NoSignal:
