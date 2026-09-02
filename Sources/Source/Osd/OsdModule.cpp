@@ -4,31 +4,22 @@
 #include <cassert>
 #include <vector>
 
-namespace
-{
-    constexpr uint32_t QueueDepthBytes = 64;
-}
-
 OsdResponseReader::OsdResponseReader()
 {
-    const osMessageQueueAttr_t queueAttributes = {
-        .name = "OsdResponseReader",
-        .cb_mem = &m_queueBuffer,
-        .cb_size = sizeof(m_queueBuffer),
-        .mq_mem = m_queueStorage,
-        .mq_size = sizeof(m_queueStorage),
-    };
-    m_queue = osMessageQueueNew(QueueDepthBytes, sizeof(uint8_t), &queueAttributes);
+    m_queue = xQueueCreateStatic(Config::OSD_RESPONSE_READER_QUEUE_SIZE, sizeof(uint8_t), m_queueStorage, &m_queueBuffer);
+    configASSERT(m_queue != nullptr);
 }
 
 OsdResponseReader::~OsdResponseReader()
 {
-    osMessageQueueDelete(m_queue);
+    vQueueDelete(m_queue);
 }
 
 void OsdResponseReader::OnByte(uint8_t byte)
 {
-    osMessageQueuePut(m_queue, &byte, 0, 0);
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(m_queue, &byte, &higherPriorityTaskWoken);
+    portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
 std::optional<std::vector<uint8_t>> OsdResponseReader::ReadBytes(size_t byteCount, uint32_t timeoutMs)
@@ -38,7 +29,7 @@ std::optional<std::vector<uint8_t>> OsdResponseReader::ReadBytes(size_t byteCoun
     for (size_t i = 0; i < byteCount; i++)
     {
         uint8_t byte = 0;
-        if (osMessageQueueGet(m_queue, &byte, nullptr, timeoutMs) != osOK)
+        if (xQueueReceive(m_queue, &byte, pdMS_TO_TICKS(timeoutMs)) != pdTRUE)
             return std::nullopt;
 
         result.push_back(byte);

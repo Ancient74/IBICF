@@ -10,7 +10,6 @@
 #include "Uart.h"
 #include "optional"
 #include <vector>
-#include <cmsis_os2.h>
 
 // ---- 0xA0 - Configure UART ----
 struct ConfigureUartRawCommand
@@ -220,7 +219,7 @@ public:
     std::optional<std::vector<uint8_t>> ReadBytes(size_t byteCount, uint32_t timeoutMs);
 
 private:
-    osMessageQueueId_t m_queue;
+    QueueHandle_t m_queue;
     StaticQueue_t m_queueBuffer{};
     uint8_t m_queueStorage[Config::OSD_RESPONSE_READER_QUEUE_SIZE];
 };
