@@ -2,7 +2,6 @@
 #include "CrsfLib/Frame.hpp"
 #include "CrsfLib/FrameBuilder.hpp"
 #include "CrsfLib/FrameUnpack.hpp"
-#include <memory>
 #include "Uart.h"
 #include "PubSubLib/Node.hpp"
 #include "KalmanLib/MultiplicativeExtendedKalmanFilter.hpp"

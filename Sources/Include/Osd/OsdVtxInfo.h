@@ -6,7 +6,7 @@
 class OsdVtxInfo : public IOsdRenderable
 {
 public:
-    OsdVtxInfo(std::shared_ptr<OsdController> osd, std::shared_ptr<TrampProtocolController> controller);
+    OsdVtxInfo(OsdController& osd, TrampProtocolController& controller);
 
     void RenderIfPending() override;
 
@@ -34,8 +34,8 @@ private:
         return result;
     }();
 
-    std::shared_ptr<OsdController> m_osd;
-    std::shared_ptr<TrampProtocolController> m_controller;
+    OsdController& m_osd;
+    TrampProtocolController& m_controller;
     const uint8_t m_xPos;
     const uint8_t m_yPos;
     bool m_currentPit = false;

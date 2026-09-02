@@ -1,5 +1,4 @@
 #pragma once
-#include <memory>
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "SensorStatus.h"
@@ -18,9 +17,9 @@ class SensorSamplingNode
 public:
     using OutputType = SensorOutputT;
 
-    SensorSamplingNode(std::unique_ptr<SensorT> sensor, const char* taskName)
-        : Base(taskName, pdMS_TO_TICKS(1000 / sensor->GetSamplingRate())),
-          m_sensor(std::move(sensor)) {}
+    SensorSamplingNode(SensorT& sensor, const char* taskName)
+        : Base(taskName, pdMS_TO_TICKS(1000 / sensor.GetSamplingRate())),
+          m_sensor(sensor) {}
 
     ~SensorSamplingNode()
     {
@@ -30,12 +29,12 @@ public:
     void RunTaskIteration()
     {
         SensorOutputT raw{};
-        if (m_sensor->GetRawValues(raw) == Status::Ok)
+        if (m_sensor.GetRawValues(raw) == Status::Ok)
         {
-            m_sensor->Normalize(raw);
+            m_sensor.Normalize(raw);
             this->Publish(raw);
         }
     }
 
-    std::unique_ptr<SensorT> m_sensor;
+    SensorT& m_sensor;
 };

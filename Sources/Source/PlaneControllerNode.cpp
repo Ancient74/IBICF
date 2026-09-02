@@ -12,19 +12,19 @@ namespace
     }
 }
 
-PlaneControllerNode::PlaneControllerNode(std::shared_ptr<PlaneModel> model
-    , std::unique_ptr<IFlightMode> lowPosFlightMode
-    , std::unique_ptr<IFlightMode> midPosFlightMode
-    , std::unique_ptr<IFlightMode> highPosFlightMode
-    , std::unique_ptr<IFlightMode> failSafeFlightMode)
+PlaneControllerNode::PlaneControllerNode(PlaneModel& model
+    , IFlightMode& lowPosFlightMode
+    , IFlightMode& midPosFlightMode
+    , IFlightMode& highPosFlightMode
+    , IFlightMode& failSafeFlightMode)
     : m_isInitialized(false)
     , m_isArmed(false)
     , m_currentFlightMode(nullptr)
-    , m_lowPosFlightMode(std::move(lowPosFlightMode))
-    , m_midPosFlightMode(std::move(midPosFlightMode))
-    , m_highPosFlightMode(std::move(highPosFlightMode))
-    , m_failSafeFlightMode(std::move(failSafeFlightMode))
-    , m_model(std::move(model))
+    , m_lowPosFlightMode(lowPosFlightMode)
+    , m_midPosFlightMode(midPosFlightMode)
+    , m_highPosFlightMode(highPosFlightMode)
+    , m_failSafeFlightMode(failSafeFlightMode)
+    , m_model(model)
 {
     m_watchdogTimer = xTimerCreateStatic("RcWatchdog",
         pdMS_TO_TICKS(Config::RC_LINK_TIMEOUT_MS),
@@ -52,10 +52,10 @@ void PlaneControllerNode::OnLinkLost()
     auto* previousMode = m_currentFlightMode.load();
     if (previousMode != nullptr)
         previousMode->OnExit();
-    m_currentFlightMode.store(m_failSafeFlightMode.get());
-    m_failSafeFlightMode->OnEnter();
+    m_currentFlightMode.store(&m_failSafeFlightMode);
+    m_failSafeFlightMode.OnEnter();
 
-    const char* name = m_failSafeFlightMode->GetName();
+    const char* name = m_failSafeFlightMode.GetName();
     Publish(std::span<const char>(name, std::strlen(name)));
     xTimerStart(m_outputPushTimer, 0);
 }
@@ -71,10 +71,10 @@ void PlaneControllerNode::PushFailsafeOutputs()
         return;
     auto* mode = m_currentFlightMode.load();
     auto controlCommands = mode->Translate({});
-    m_model->Pitch(controlCommands.pitch);
-    m_model->Roll(controlCommands.roll);
-    m_model->Yaw(controlCommands.yaw);
-    m_model->Thrust(static_cast<uint8_t>(controlCommands.thrust));
+    m_model.Pitch(controlCommands.pitch);
+    m_model.Roll(controlCommands.roll);
+    m_model.Yaw(controlCommands.yaw);
+    m_model.Thrust(static_cast<uint8_t>(controlCommands.thrust));
 }
 
 void PlaneControllerNode::Process(const RcPacket& packet)
@@ -90,29 +90,29 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     switch (packet.flightMode)
     {
     case TriSwitchPosition::Low:
-        if (currentFlightMode != m_lowPosFlightMode.get())
+        if (currentFlightMode != &m_lowPosFlightMode)
         {
             if (currentFlightMode != nullptr)
                 currentFlightMode->OnExit();
-            m_currentFlightMode.store(m_lowPosFlightMode.get());
+            m_currentFlightMode.store(&m_lowPosFlightMode);
             flightModeChanged = true;
         }
         break;
     case TriSwitchPosition::Mid:
-        if (currentFlightMode != m_midPosFlightMode.get())
+        if (currentFlightMode != &m_midPosFlightMode)
         {
             if (currentFlightMode != nullptr)
                 currentFlightMode->OnExit();
-            m_currentFlightMode.store(m_midPosFlightMode.get());
+            m_currentFlightMode.store(&m_midPosFlightMode);
             flightModeChanged = true;
         }
         break;
     case TriSwitchPosition::High:
-        if (currentFlightMode != m_highPosFlightMode.get())
+        if (currentFlightMode != &m_highPosFlightMode)
         {
             if (currentFlightMode != nullptr)
                 currentFlightMode->OnExit();
-            m_currentFlightMode.store(m_highPosFlightMode.get());
+            m_currentFlightMode.store(&m_highPosFlightMode);
             flightModeChanged = true;
         }
         break;
@@ -128,16 +128,16 @@ void PlaneControllerNode::Process(const RcPacket& packet)
         Publish(std::span<const char>(name, std::strlen(name)));
     }
     auto controlCommands = m_currentFlightMode.load()->Translate(FromRcPacket(packet));
-    m_model->Pitch(controlCommands.pitch);
-    m_model->Roll(controlCommands.roll);
-    m_model->Yaw(controlCommands.yaw);
+    m_model.Pitch(controlCommands.pitch);
+    m_model.Roll(controlCommands.roll);
+    m_model.Yaw(controlCommands.yaw);
 
     if (!m_isInitialized && packet.isArmed)
     {
-        m_model->Thrust(0);
+        m_model.Thrust(0);
         return;
     }
     m_isInitialized = true;
     uint8_t allowedThrust = packet.isArmed ? static_cast<uint8_t>(controlCommands.thrust) : 0;
-    m_model->Thrust(allowedThrust);
+    m_model.Thrust(allowedThrust);
 }

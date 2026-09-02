@@ -6,18 +6,17 @@
 #include "FreeRTOS.h"
 #include "timers.h"
 #include <atomic>
-#include <memory>
 
 class PlaneControllerNode
     : public NodeInput<PlaneControllerNode, RcPacket>
     , public NodeOutput<PlaneControllerNode, std::span<const char>, 1>
 {
 public:
-    PlaneControllerNode(std::shared_ptr<PlaneModel> model
-        , std::unique_ptr<IFlightMode> lowPosFlightMode
-        , std::unique_ptr<IFlightMode> midPosFlightMode
-        , std::unique_ptr<IFlightMode> highPosFlightMode
-        , std::unique_ptr<IFlightMode> failSafeFlightMode);
+    PlaneControllerNode(PlaneModel& model
+        , IFlightMode& lowPosFlightMode
+        , IFlightMode& midPosFlightMode
+        , IFlightMode& highPosFlightMode
+        , IFlightMode& failSafeFlightMode);
     void Process(const RcPacket& packet);
 
 private:
@@ -29,11 +28,11 @@ private:
     std::atomic<bool> m_isInitialized;
     std::atomic<bool> m_isArmed;
     std::atomic<IFlightMode*> m_currentFlightMode;
-    std::unique_ptr<IFlightMode> m_lowPosFlightMode;
-    std::unique_ptr<IFlightMode> m_midPosFlightMode;
-    std::unique_ptr<IFlightMode> m_highPosFlightMode;
-    std::unique_ptr<IFlightMode> m_failSafeFlightMode;
-    std::shared_ptr<PlaneModel> m_model;
+    IFlightMode& m_lowPosFlightMode;
+    IFlightMode& m_midPosFlightMode;
+    IFlightMode& m_highPosFlightMode;
+    IFlightMode& m_failSafeFlightMode;
+    PlaneModel& m_model;
 
     TimerHandle_t m_watchdogTimer = nullptr;
     TimerHandle_t m_outputPushTimer = nullptr;

@@ -1,6 +1,5 @@
 #pragma once
 #include "main.h"
-#include <memory>
 #include <array>
 #include <span>
 
@@ -21,7 +20,7 @@ public:
 class Uart : public IWriter
 {
 public:
-    Uart(UART_HandleTypeDef& handle, std::shared_ptr<IReader> reader);
+    Uart(UART_HandleTypeDef& handle, IReader& reader);
     ~Uart();
 
     Uart(const Uart&) = delete;
@@ -40,5 +39,5 @@ private:
 
     UART_HandleTypeDef& m_handle;
     uint8_t m_currentByte;
-    std::shared_ptr<IReader> m_reader;
+    IReader& m_reader;
 };

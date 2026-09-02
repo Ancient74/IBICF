@@ -31,14 +31,13 @@ class FusionCore
 {
 public:
     FusionCore(const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
+        : m_kalmanFilter(
+              Vector3f{[](){ Vector3f v{}; v(2, 0) = 1.0f; return v; }()},
+              Vector3f{[](){ Vector3f v{}; v(0,0) = 0.434f; v(1,0) = 0.061f; v(2,0) = 0.899f; return v; }()},
+              accelR,
+              magnetR,
+              N)
     {
-        Vector3f gravityDirection{};
-        gravityDirection(2, 0) = 1.0f;
-        Vector3f magnetometerDirection{};
-        magnetometerDirection(0,0) = 0.434f;
-        magnetometerDirection(1,0) = 0.061f;
-        magnetometerDirection(2,0) = 0.899f;
-        m_kalmanFilter = std::make_unique<MultiplicativeExtendedKalmanFilter>(gravityDirection, magnetometerDirection, accelR, magnetR, N);
     }
 
     Quaternion<float> Step(const GyroscopeAccelerometer& imu, bool hasMag, const Magnetometer& mag, float dt)
@@ -62,11 +61,11 @@ public:
             magnet(2, 0) = mag.z;
         }
 
-        return m_kalmanFilter->Step(gyro, accel, magnet, dt, hasMag);
+        return m_kalmanFilter.Step(gyro, accel, magnet, dt, hasMag);
     }
 
 private:
-    std::unique_ptr<MultiplicativeExtendedKalmanFilter> m_kalmanFilter;
+    MultiplicativeExtendedKalmanFilter m_kalmanFilter;
 };
 
 template<uint8_t MaxSubs>

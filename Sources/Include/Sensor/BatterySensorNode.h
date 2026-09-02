@@ -5,7 +5,6 @@
 #include "PubSubLib/Node.hpp"
 #include <array>
 #include <cstdint>
-#include <memory>
 #include <span>
 
 struct BatteryInfo
@@ -22,11 +21,11 @@ class BatterySensorNode
     using Base = CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2>;
 
 public:
-    BatterySensorNode(std::unique_ptr<AdcSensor> adcSensor, const char* taskName, uint32_t samplingRateHz)
+    BatterySensorNode(AdcSensor& adcSensor, const char* taskName, uint32_t samplingRateHz)
         : Base(taskName, pdMS_TO_TICKS(1000 / samplingRateHz))
-        , m_adcSensor(std::move(adcSensor))
+        , m_adcSensor(adcSensor)
     {
-        const uint32_t adcConversionRateHz = m_adcSensor->GetSamplingRate();
+        const uint32_t adcConversionRateHz = m_adcSensor.GetSamplingRate();
         configASSERT(adcConversionRateHz > 0
             && "AdcSensor::GetSamplingRate() returned 0 - check ClockPrescaler config");
 
@@ -47,12 +46,12 @@ public:
 
         m_oversampleCount = ratio;
         m_extraBits = extraBits;
-        m_effectiveMaxCode = (1u << (m_adcSensor->GetAdcResolutionBits() + extraBits)) - 1u;
+        m_effectiveMaxCode = (1u << (m_adcSensor.GetAdcResolutionBits() + extraBits)) - 1u;
     }
 
     void RunTaskIteration()
     {
-        const Status status = m_adcSensor->StartDmaTransactionAndWait(
+        const Status status = m_adcSensor.StartDmaTransactionAndWait(
             std::span<uint16_t>(m_buffer.data(), m_oversampleCount));
 
         if (status != Status::Ok)
@@ -78,7 +77,7 @@ public:
     }
 
 private:
-    std::unique_ptr<AdcSensor> m_adcSensor;
+    AdcSensor& m_adcSensor;
     std::array<uint16_t, Config::BATTERY_ADC_OVERSAMPLING_RATIO> m_buffer{};
     uint32_t m_oversampleCount = 0;
     uint32_t m_extraBits = 0;

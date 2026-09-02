@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <memory>
 
 class ISurfaceController
 {
@@ -20,11 +19,11 @@ class PlaneModel
 {
 public:
     PlaneModel(
-          std::unique_ptr<ISurfaceController> leftAileron
-        , std::unique_ptr<ISurfaceController> rightAileron
-        , std::unique_ptr<ISurfaceController> leftRuddervator
-        , std::unique_ptr<ISurfaceController> rightRuddervator
-        , std::unique_ptr<IThrustController> thrust);
+          ISurfaceController& leftAileron
+        , ISurfaceController& rightAileron
+        , ISurfaceController& leftRuddervator
+        , ISurfaceController& rightRuddervator
+        , IThrustController& thrust);
 
     void Roll(int16_t deviation);
     void Pitch(int16_t deviation);
@@ -35,11 +34,11 @@ public:
 private:
     void UpdateRuddervators();
 
-    std::unique_ptr<ISurfaceController> m_leftAileron;
-    std::unique_ptr<ISurfaceController> m_rightAileron;
-    std::unique_ptr<ISurfaceController> m_leftRuddervator;
-    std::unique_ptr<ISurfaceController> m_rightRuddervator;
-    std::unique_ptr<IThrustController> m_thrust;
+    ISurfaceController& m_leftAileron;
+    ISurfaceController& m_rightAileron;
+    ISurfaceController& m_leftRuddervator;
+    ISurfaceController& m_rightRuddervator;
+    IThrustController& m_thrust;
     int16_t m_pitchCommand = 0;
     int16_t m_yawCommand   = 0;
 };

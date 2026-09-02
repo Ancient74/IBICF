@@ -5,8 +5,8 @@
 class OsdHorizonNode : public OsdRenderer<OsdHorizonNode, Quaternion<float>>
 {
 public:
-    OsdHorizonNode(std::shared_ptr<OsdController> osd)
-        : OsdRenderer<OsdHorizonNode, Quaternion<float>>(std::move(osd))
+    explicit OsdHorizonNode(OsdController& osd)
+        : OsdRenderer<OsdHorizonNode, Quaternion<float>>(osd)
     {
     }
 
@@ -16,7 +16,7 @@ public:
         constexpr float VerticalMarginFrac = 0.2f;
 
         const auto attitude = quat.ToAttitude();
-        const auto rows = GetOsdController()->Rows();
+        const auto rows = GetOsdController().Rows();
         constexpr auto totalCols = OsdController::Cols();
         constexpr auto cols = totalCols / 2;
         constexpr auto colOffset = (totalCols - cols) / 2;
@@ -46,7 +46,7 @@ public:
             cells[count++] = {static_cast<uint8_t>(row), static_cast<uint8_t>(c + colOffset),
                             static_cast<uint8_t>(HorizonCharCode + sub)};
         }
-        GetOsdController()->DrawCells(cells);
+        GetOsdController().DrawCells(cells);
     }
 
 private:

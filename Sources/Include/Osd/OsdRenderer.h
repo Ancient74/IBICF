@@ -13,8 +13,8 @@ template<typename Derived, typename RenderingData>
 class OsdRenderer : public IOsdRenderable, public NodeInput<Derived, RenderingData>
 {
 public:
-    explicit OsdRenderer(std::shared_ptr<OsdController> osd)
-        : m_osd(std::move(osd))
+    explicit OsdRenderer(OsdController& osd)
+        : m_osd(osd)
     {
         static_assert(requires(Derived& r, RenderingData data) {
             { r.Render(data) } -> std::same_as<void>;
@@ -55,13 +55,13 @@ public:
     }
 
 protected:
-    std::shared_ptr<OsdController> GetOsdController() const
+    OsdController& GetOsdController() const
     {
         return m_osd;
     }
 
 private:
-    std::shared_ptr<OsdController> m_osd;
+    OsdController& m_osd;
     std::optional<RenderingData> m_latestData{};
     SemaphoreHandle_t m_mutex{};
     StaticSemaphore_t m_mutexBuffer{};

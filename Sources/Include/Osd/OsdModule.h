@@ -1,7 +1,6 @@
 #pragma once
 #include <array>
 #include <cstdint>
-#include <memory>
 #include <span>
 #include <string_view>
 #include "Config.h"
@@ -227,7 +226,7 @@ private:
 class OsdModule
 {
 public:
-    OsdModule(std::unique_ptr<IWriter> writer, std::shared_ptr<IOsdResponseReader> reader);
+    OsdModule(IWriter& writer, IOsdResponseReader& reader);
 
     // 0xA0
     void ConfigureUart(uint32_t baudRate, StopBits stopBits, ParityBit parityBit, bool isMsbFirst);
@@ -290,6 +289,6 @@ public:
 private:
     void WriteCommand(uint8_t commandId, std::span<const uint8_t> argument);
 
-    std::unique_ptr<IWriter> m_writer;
-    std::shared_ptr<IOsdResponseReader> m_reader;
+    IWriter& m_writer;
+    IOsdResponseReader& m_reader;
 };

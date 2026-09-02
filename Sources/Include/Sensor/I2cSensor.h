@@ -1,7 +1,6 @@
 #pragma once
 #include "FreeRTOS.h"
 #include <stdint.h>
-#include <memory>
 #include <span>
 #include "main.h"
 #include "semphr.h"
@@ -26,11 +25,7 @@ public:
     explicit I2cBus(I2C_HandleTypeDef& i2c);
     ~I2cBus();
 
-    template<typename T>
-    std::unique_ptr<T> CreateSensor()
-    {
-        return std::make_unique<T>(m_i2c, m_mutex);
-    }
+    SemaphoreHandle_t Mutex() const { return m_mutex; }
 
 private:
     I2C_HandleTypeDef& m_i2c;

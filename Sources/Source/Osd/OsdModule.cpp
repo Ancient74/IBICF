@@ -31,18 +31,18 @@ bool OsdResponseReader::ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs)
     return true;
 }
 
-OsdModule::OsdModule(std::unique_ptr<IWriter> writer, std::shared_ptr<IOsdResponseReader> reader)
-    : m_writer(std::move(writer))
-    , m_reader(std::move(reader))
+OsdModule::OsdModule(IWriter& writer, IOsdResponseReader& reader)
+    : m_writer(writer)
+    , m_reader(reader)
 {
 }
 
 void OsdModule::WriteCommand(uint8_t commandId, std::span<const uint8_t> argument)
 {
-    m_writer->Write({&commandId, 1});
+    m_writer.Write({&commandId, 1});
     if (!argument.empty())
     {
-        m_writer->Write(argument);
+        m_writer.Write(argument);
     }
 }
 
@@ -212,7 +212,7 @@ std::optional<uint8_t> OsdModule::SaveCommandSequence(std::span<const uint8_t> c
     WriteCommand(0xAE, std::span<const uint8_t>(argument.data(), commandSequence.size() + 1));
 
     uint8_t response = 0;
-    if (!m_reader->ReadBytes({&response, 1}, timeoutMs))
+    if (!m_reader.ReadBytes({&response, 1}, timeoutMs))
         return std::nullopt;
     return response;
 }
@@ -243,7 +243,7 @@ std::optional<InputSignalStatus> OsdModule::GetInputSignalStatus(uint32_t timeou
     WriteCommand(0xAB, {});
 
     uint8_t status = 0;
-    if (!m_reader->ReadBytes({&status, 1}, timeoutMs))
+    if (!m_reader.ReadBytes({&status, 1}, timeoutMs))
         return std::nullopt;
 
     switch (static_cast<InputSignalStatus>(status))

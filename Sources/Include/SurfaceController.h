@@ -5,10 +5,10 @@
 class SurfaceController : public ISurfaceController
 {
 public:
-    SurfaceController(std::unique_ptr<ServoPwmControl> pwmControl);
+    explicit SurfaceController(ServoPwmControl& pwmControl);
 
     void SetSurface(int16_t deviation) override;
 
 private:
-    std::unique_ptr<ServoPwmControl> m_pwmControl;
+    ServoPwmControl& m_pwmControl;
 };

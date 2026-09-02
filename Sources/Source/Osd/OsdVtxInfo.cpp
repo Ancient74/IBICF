@@ -1,16 +1,17 @@
 #include "OsdVtxInfo.h"
+#include <cstdio>
 
-OsdVtxInfo::OsdVtxInfo(std::shared_ptr<OsdController> osd, std::shared_ptr<TrampProtocolController> controller)
-        : m_osd(std::move(osd))
-        , m_controller(std::move(controller))
-        , m_xPos(m_osd->Cols() - 10)
+OsdVtxInfo::OsdVtxInfo(OsdController& osd, TrampProtocolController& controller)
+        : m_osd(osd)
+        , m_controller(controller)
+        , m_xPos(m_osd.Cols() - 10)
         , m_yPos(2)
 {
 }
 
 void OsdVtxInfo::RenderIfPending()
 {
-    const auto status = m_controller->GetStatus();
+    const auto status = m_controller.GetStatus();
     const auto power = status->actualPowerMw;
     const auto isPit = status->pitMode;
     if (m_currentPower == power && m_currentPit == isPit)
@@ -32,5 +33,5 @@ void OsdVtxInfo::RenderIfPending()
         cells[i].col = m_xPos + i;
         cells[i].row = m_yPos;
     }
-    m_osd->DrawCells(cells);
+    m_osd.DrawCells(cells);
 }

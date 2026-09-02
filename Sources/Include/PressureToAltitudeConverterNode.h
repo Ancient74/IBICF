@@ -8,10 +8,10 @@ class PressureToAltitudeConverterNode
     , public NodeOutput<PressureToAltitudeConverterNode<MaxSubs>, float, MaxSubs>
 {
 public:
-    PressureToAltitudeConverterNode(uint32_t basePressure, uint32_t baseTemperature)
-        : m_basePressure(static_cast<float>(basePressure) / 256.0f)
-        , m_baseTemperature((static_cast<float>(baseTemperature) / 100.0f) + 273.15f)
+    void SetBaseMeasurements(uint32_t basePressure, uint32_t baseTemperature)
     {
+        m_basePressure = static_cast<float>(basePressure) / 256.0f;
+        m_baseTemperature = (static_cast<float>(baseTemperature) / 100.0f) + 273.15f;
     }
 
     void Process(const BME280::Measurements& measurements)
@@ -29,6 +29,6 @@ public:
     }
 
 private:
-    float m_basePressure;
-    float m_baseTemperature;
+    float m_basePressure = 0.0f;
+    float m_baseTemperature = 0.0f;
 };

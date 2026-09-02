@@ -5,9 +5,9 @@
 class OsdBatteryVoltageNode : public OsdRenderer<OsdBatteryVoltageNode, BatteryInfo>
 {
 public:
-    OsdBatteryVoltageNode(std::shared_ptr<OsdController> osd)
-        : OsdRenderer<OsdBatteryVoltageNode, BatteryInfo>(std::move(osd))
-        , m_xPos(GetOsdController()->Cols() - 6) // -6 for every character before last col (I25.5V)
+    explicit OsdBatteryVoltageNode(OsdController& osd)
+        : OsdRenderer<OsdBatteryVoltageNode, BatteryInfo>(osd)
+        , m_xPos(GetOsdController().Cols() - 6) // -6 for every character before last col (I25.5V)
         , m_yPos(0)
     {
     }
@@ -48,7 +48,7 @@ public:
             cells[i].col = m_xPos + i;
             cells[i].row = m_yPos;
         }
-        GetOsdController()->DrawCells(cells);
+        GetOsdController().DrawCells(cells);
     }
 
 private:

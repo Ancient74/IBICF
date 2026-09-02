@@ -4,9 +4,9 @@
 class OsdFlightModeNode : public OsdRenderer<OsdFlightModeNode, std::span<const char>>
 {
 public:
-    OsdFlightModeNode(std::shared_ptr<OsdController> osd)
-        : OsdRenderer<OsdFlightModeNode, std::span<const char>>(std::move(osd))
-        , m_yPos(GetOsdController()->Rows() - 1)
+    explicit OsdFlightModeNode(OsdController& osd)
+        : OsdRenderer<OsdFlightModeNode, std::span<const char>>(osd)
+        , m_yPos(GetOsdController().Rows() - 1)
     {
     }
 
@@ -24,7 +24,7 @@ public:
             cells[i].row = m_yPos;
         }
 
-        GetOsdController()->DrawCells(std::span<OsdCell>(cells.data(), len));
+        GetOsdController().DrawCells(std::span<OsdCell>(cells.data(), len));
     }
 
 private:

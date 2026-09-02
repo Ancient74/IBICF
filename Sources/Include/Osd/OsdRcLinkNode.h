@@ -5,8 +5,8 @@
 class OsdRcLinkNode : public OsdRenderer<OsdRcLinkNode, CrsfLib::LinkStatisticsFrame>
 {
 public:
-    OsdRcLinkNode(std::shared_ptr<OsdController> osd)
-        : OsdRenderer<OsdRcLinkNode, CrsfLib::LinkStatisticsFrame>(std::move(osd))
+    explicit OsdRcLinkNode(OsdController& osd)
+        : OsdRenderer<OsdRcLinkNode, CrsfLib::LinkStatisticsFrame>(osd)
         , m_xPos(0)
         , m_yPos(2)
     {
@@ -47,7 +47,7 @@ public:
             ++idx;
         }
 
-        GetOsdController()->DrawCells(std::span<OsdCell>(cells.data(), idx));
+        GetOsdController().DrawCells(std::span<OsdCell>(cells.data(), idx));
     }
 
 private:

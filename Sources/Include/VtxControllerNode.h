@@ -7,10 +7,10 @@
 class VtxControllerNode : public NodeInput<VtxControllerNode, RcPacket>
 {
 public:
-    VtxControllerNode(std::shared_ptr<TrampProtocolController> tramp);
+    explicit VtxControllerNode(TrampProtocolController& tramp);
     void Process(const RcPacket& packet);
 
 private:
     std::optional<TriSwitchPosition> m_currentPos;
-    std::shared_ptr<TrampProtocolController> m_tramp;
+    TrampProtocolController& m_tramp;
 };

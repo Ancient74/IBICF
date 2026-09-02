@@ -43,146 +43,145 @@ using namespace std::chrono_literals;
 
 extern "C" void main_cpp()
 {
-    auto leftAileronControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_1, 500us, 2500us);
-    auto rightAileronControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_2, 500us, 2500us);
-    auto leftRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_3, 500us, 2500us);
-    auto rightRuddervatorControl = std::make_unique<ServoPwmControl>(htim4, TIM_CHANNEL_4, 500us, 2500us);
+    ServoPwmControl leftAileronControl{htim4, TIM_CHANNEL_1, 500us, 2500us};
+    ServoPwmControl rightAileronControl{htim4, TIM_CHANNEL_2, 500us, 2500us};
+    ServoPwmControl leftRuddervatorControl{htim4, TIM_CHANNEL_3, 500us, 2500us};
+    ServoPwmControl rightRuddervatorControl{htim4, TIM_CHANNEL_4, 500us, 2500us};
 
-    auto thrust = std::make_unique<ThrustController>(htim3, TIM_CHANNEL_1);
+    ThrustController thrust{htim3, TIM_CHANNEL_1};
 
-    auto leftAileron = std::make_unique<SurfaceController>(std::move(leftAileronControl));
-    auto rightAileron = std::make_unique<SurfaceController>(std::move(rightAileronControl));
-    auto leftRuddervator = std::make_unique<SurfaceController>(std::move(leftRuddervatorControl));
-    auto rightRuddervator = std::make_unique<SurfaceController>(std::move(rightRuddervatorControl));
-    auto model = std::make_shared<PlaneModel>(
-        std::move(leftAileron),
-        std::move(rightAileron),
-        std::move(leftRuddervator),
-        std::move(rightRuddervator),
-        std::move(thrust)
-    );
+    SurfaceController leftAileron{leftAileronControl};
+    SurfaceController rightAileron{rightAileronControl};
+    SurfaceController leftRuddervator{leftRuddervatorControl};
+    SurfaceController rightRuddervator{rightRuddervatorControl};
+    PlaneModel model{
+        leftAileron,
+        rightAileron,
+        leftRuddervator,
+        rightRuddervator,
+        thrust
+    };
 
-    auto bus = std::make_unique<I2cBus>(hi2c2);
-    auto mpuSensor = bus->CreateSensor<Mpu6050>();
-    mpuSensor->Start();
+    I2cBus bus{hi2c2};
+    Mpu6050 mpuSensor{hi2c2, bus.Mutex()};
+    mpuSensor.Start();
 
     Matrix3f accelR{};
     Matrix3f magnetR{};
     Matrix3f N{};
-    auto samplingRate = mpuSensor->GetSamplingRate();
+    auto samplingRate = mpuSensor.GetSamplingRate();
 
-    mpuSensor->Calibrate(accelR, N);
-    auto mpuNode = std::make_unique<SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1>>(std::move(mpuSensor), "MPU");
-    auto mpuFilterNode = std::make_unique<EmaFilterNode<GyroscopeAccelerometer, 1>>(0.1f, 5);
-    auto fusion = std::make_unique<SensorFusionNode<2>>("Fusion", 1.0f / samplingRate, accelR, magnetR, N);
+    mpuSensor.Calibrate(accelR, N);
+    SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
+    EmaFilterNode<GyroscopeAccelerometer, 1> mpuFilterNode{0.1f, 5};
 
-    Connect(*mpuNode, *mpuFilterNode);
-    Connect(*mpuFilterNode, fusion->ImuInput());
 
-    std::unique_ptr<Qmc5883L> qmcSensor = nullptr;
-    std::unique_ptr<SensorSamplingNode<Qmc5883L, Magnetometer, 1>> qmcNode = nullptr;
-    std::unique_ptr<EmaFilterNode<Magnetometer, 1>> qmcFilterNode = nullptr;
+    Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
+    SensorSamplingNode<Qmc5883L, Magnetometer, 1> qmcNode{qmcSensor, "QMC"};
+    EmaFilterNode<Magnetometer, 1> qmcFilterNode{0.1f, 1};
+    if (Config::ENABLE_MAGNETOMETER_CORRECTION)
+    {
+        qmcSensor.Start();
+        qmcSensor.GetSensorVariance(magnetR);
+    }
+    SensorFusionNode<2> fusion{"Fusion", 1.0f / samplingRate, accelR, magnetR, N};
 
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
     {
-        qmcSensor = bus->CreateSensor<Qmc5883L>();
-        qmcNode = std::make_unique<SensorSamplingNode<Qmc5883L, Magnetometer, 1>>(std::move(qmcSensor), "QMC");
-        qmcSensor->Start();
-        qmcSensor->GetSensorVariance(magnetR);
-        qmcFilterNode = std::make_unique<EmaFilterNode<Magnetometer, 1>>(0.1f, 1);
-
-        Connect(*qmcNode, *qmcFilterNode);
-        Connect(*qmcFilterNode, fusion->MagInput());
-        qmcNode->Start();
+        Connect(qmcNode, qmcFilterNode);
+        Connect(qmcFilterNode, fusion.MagInput());
+        qmcNode.Start();
     }
-    mpuNode->Start();
 
-    std::unique_ptr<BME280> bmeSensor = bus->CreateSensor<BME280>();
-    std::unique_ptr<SensorSamplingNode<BME280, BME280::Measurements, 1>> bmeNode = nullptr;
-    std::unique_ptr<EmaFilterNode<BME280::Measurements, 1>> bmeFilterNode = nullptr;
-    std::unique_ptr<PressureToAltitudeConverterNode<2>> altitudeNode = nullptr;
-    std::unique_ptr<OsdAltitudeNode> osdAltitudeNode = nullptr;
+    Connect(mpuNode, mpuFilterNode);
+    Connect(mpuFilterNode, fusion.ImuInput());
+    mpuNode.Start();
 
-    if(bmeSensor->Start() == Status::Ok)
+    BME280 bmeSensor{hi2c2, bus.Mutex()};
+
+    SensorSamplingNode<BME280, BME280::Measurements, 1> bmeNode{bmeSensor, "BME"};
+    EmaFilterNode<BME280::Measurements, 1> bmeFilterNode{0.1f, 5};
+    PressureToAltitudeConverterNode<2> altitudeNode;
+    bool useBme = false;
+    if(bmeSensor.Start() == Status::Ok)
     {
+        useBme = true;
         BME280::Measurements baseMeasurements{};
-        bmeSensor->Calibrate(baseMeasurements);
-        bmeNode = std::make_unique<SensorSamplingNode<BME280, BME280::Measurements, 1>>(std::move(bmeSensor), "BME");
-        bmeFilterNode = std::make_unique<EmaFilterNode<BME280::Measurements, 1>>(0.1f, 5);
-        altitudeNode = std::make_unique<PressureToAltitudeConverterNode<2>>(baseMeasurements.pressure, baseMeasurements.temperature);
-        bmeNode->Start();
+        bmeSensor.Calibrate(baseMeasurements);
+        altitudeNode.SetBaseMeasurements(baseMeasurements.pressure, baseMeasurements.temperature);
+        bmeNode.Start();
     }
 
-    auto adcSensor = std::make_unique<AdcSensor>(hadc1, ADC_CHANNEL_1);
-    auto batterySensor = std::make_unique<BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE>>(std::move(adcSensor), "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ);
+    AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
+    BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
 
-    auto osdReader = std::make_shared<OsdResponseReader>();
-    auto osdUart = std::make_unique<Uart>(huart2, osdReader);
-    auto osdModule = std::make_unique<OsdModule>(std::move(osdUart), osdReader);
-    auto osdController = std::make_shared<OsdController>(std::move(osdModule));
-    auto osdHorizonNode = std::make_unique<OsdHorizonNode>(osdController);
-    auto osdBatteryInfoNode = std::make_unique<OsdBatteryVoltageNode>(osdController);
-    auto osdFlightModeNode = std::make_unique<OsdFlightModeNode>(osdController);
-    auto osdRcLinkNode = std::make_unique<OsdRcLinkNode>(osdController);
+    OsdResponseReader osdReader{};
+    Uart osdUart{huart2, osdReader};
+    OsdModule osdModule{osdUart, osdReader};
+    OsdController osdController{osdModule};
+    OsdHorizonNode osdHorizonNode{osdController};
+    OsdBatteryVoltageNode osdBatteryInfoNode{osdController};
+    OsdFlightModeNode osdFlightModeNode{osdController};
+    OsdRcLinkNode osdRcLinkNode{osdController};
+    OsdAltitudeNode osdAltitudeNode{osdController};
 
-    auto osdCompositorTask = std::make_unique<OsdCompositorTask<6>>("OsdRenderer", Config::OSD_REFRESH_RATE_HZ);
-    osdCompositorTask->Register(*osdHorizonNode);
-    osdCompositorTask->Register(*osdBatteryInfoNode);
-    osdCompositorTask->Register(*osdFlightModeNode);
-    osdCompositorTask->Register(*osdRcLinkNode);
+    OsdCompositorTask<6> osdCompositorTask{"OsdRenderer", Config::OSD_REFRESH_RATE_HZ};
+    osdCompositorTask.Register(osdHorizonNode);
+    osdCompositorTask.Register(osdBatteryInfoNode);
+    osdCompositorTask.Register(osdFlightModeNode);
+    osdCompositorTask.Register(osdRcLinkNode);
 
-    auto lowPosFlightMode = std::make_unique<ManualFlightMode>();
-    auto midPosFlightMode = std::make_unique<ManualFlightMode>();
-    auto highPosFlightMode = std::make_unique<CruiseFlightMode>("CruiseFlightMode");
-    auto failsafeFlightMode = std::make_unique<FailsafeFlightMode>("FailSafeMode");
+    ManualFlightMode lowPosFlightMode{};
+    ManualFlightMode midPosFlightMode{};
+    CruiseFlightMode highPosFlightMode{"CruiseFlightMode"};
+    FailsafeFlightMode failsafeFlightMode{"FailSafeMode"};
 
-    Connect(*fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(*highPosFlightMode));
+    Connect(fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(highPosFlightMode));
 
-    if (altitudeNode)
+    if (useBme)
     {
-        osdAltitudeNode = std::make_unique<OsdAltitudeNode>(osdController);
-        Connect(*altitudeNode, *osdAltitudeNode);
-        Connect(*altitudeNode, static_cast<NodeInput<CruiseFlightMode, float>&>(*highPosFlightMode));
-        osdCompositorTask->Register(*osdAltitudeNode);
+        Connect(altitudeNode, osdAltitudeNode);
+        Connect(altitudeNode, static_cast<NodeInput<CruiseFlightMode, float>&>(highPosFlightMode));
+        osdCompositorTask.Register(osdAltitudeNode);
     }
 
-    Connect(*fusion, *osdHorizonNode);
-    Connect(*batterySensor, *osdBatteryInfoNode);
+    Connect(fusion, osdHorizonNode);
+    Connect(batterySensor, osdBatteryInfoNode);
 
-    auto swUart = std::make_unique<HalfDuplexSoftwareUart>(TRAMP_Pin, TRAMP_GPIO_Port, htim10);
-    auto trampParser = std::make_unique<TrampFrameParser>("TrampFrameParser");
-    auto trampProtocolController = std::make_shared<TrampProtocolController>("TrampProtocol");
-    Connect(*swUart, *trampParser);
-    Connect(*trampProtocolController, *swUart);
-    auto osdVtxNode = std::make_unique<OsdVtxInfo>(osdController, trampProtocolController);
-    osdCompositorTask->Register(*osdVtxNode);
+    HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim10};
+    TrampFrameParser trampParser{"TrampFrameParser"};
+    TrampProtocolController trampProtocolController{"TrampProtocol"};
+    Connect(swUart, trampParser);
+    Connect(trampProtocolController, swUart);
+    OsdVtxInfo osdVtxNode{osdController, trampProtocolController};
+    osdCompositorTask.Register(osdVtxNode);
 
-    fusion->Start();
-    batterySensor->Start();
+    fusion.Start();
+    batterySensor.Start();
 
-    auto crsfFrameReader = std::make_shared<CrsfFrameReaderNode>("CrsfReader");
-    auto crsfFrameParser = std::make_unique<CrsfLib::FrameParserNode>();
-    auto crsfFrameProcessor = std::make_unique<CrsfFrameProcessorNode<2>>();
-    auto crsfUart = std::make_shared<Uart>(huart1, crsfFrameReader);
-    auto crsfDeviceInfo = std::make_unique<DeviceInfoWriteNode>(crsfUart);
+    CrsfFrameReaderNode crsfFrameReader{"CrsfReader"};
+    CrsfLib::FrameParserNode crsfFrameParser{};
+    CrsfFrameProcessorNode<2> crsfFrameProcessor{};
+    Uart crsfUart{huart1, crsfFrameReader};
+    DeviceInfoWriteNode crsfDeviceInfo{crsfUart};
 
-    Connect(*crsfFrameReader, *crsfFrameParser);
-    Connect(*crsfFrameParser, *crsfFrameProcessor);
-    Connect(crsfFrameProcessor->GetDeviceInfoNode(), *crsfDeviceInfo);
-    crsfFrameReader->Start();
+    Connect(crsfFrameReader, crsfFrameParser);
+    Connect(crsfFrameParser, crsfFrameProcessor);
+    Connect(crsfFrameProcessor.GetDeviceInfoNode(), crsfDeviceInfo);
+    crsfFrameReader.Start();
 
-    auto vtxControllerNode = std::make_unique<VtxControllerNode>(trampProtocolController);
-    auto planeControllerNode = std::make_unique<PlaneControllerNode>(model
-        , std::move(lowPosFlightMode)
-        , std::move(midPosFlightMode)
-        , std::move(highPosFlightMode)
-        , std::move(failsafeFlightMode));
-    Connect(crsfFrameProcessor->GetRcPacketNode(), *vtxControllerNode);
-    Connect(crsfFrameProcessor->GetRcPacketNode(), *planeControllerNode);
-    Connect(crsfFrameProcessor->GetLinkInfoNode(), *osdRcLinkNode);
-    Connect(*planeControllerNode, *osdFlightModeNode);
+    VtxControllerNode vtxControllerNode{trampProtocolController};
+    PlaneControllerNode planeControllerNode{model,
+        lowPosFlightMode,
+        midPosFlightMode,
+        highPosFlightMode,
+        failsafeFlightMode};
+    Connect(crsfFrameProcessor.GetRcPacketNode(), vtxControllerNode);
+    Connect(crsfFrameProcessor.GetRcPacketNode(), planeControllerNode);
+    Connect(crsfFrameProcessor.GetLinkInfoNode(), osdRcLinkNode);
+    Connect(planeControllerNode, osdFlightModeNode);
 
-    osdCompositorTask->StartCompositor();
+    osdCompositorTask.StartCompositor();
 
     vTaskDelete(nullptr);
 }

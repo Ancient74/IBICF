@@ -4,10 +4,10 @@
 class OsdAltitudeNode : public OsdRenderer<OsdAltitudeNode, float>
 {
 public:
-    OsdAltitudeNode(std::shared_ptr<OsdController> osd)
-        : OsdRenderer<OsdAltitudeNode, float>(std::move(osd))
-        , m_xPos(GetOsdController()->Cols() - 7)
-        , m_yPos(GetOsdController()->Rows() - 6)
+    explicit OsdAltitudeNode(OsdController& osd)
+        : OsdRenderer<OsdAltitudeNode, float>(osd)
+        , m_xPos(GetOsdController().Cols() - 7)
+        , m_yPos(GetOsdController().Rows() - 6)
     {
     }
 
@@ -26,7 +26,7 @@ public:
             cells[i].col = m_xPos + i;
             cells[i].row = m_yPos;
         }
-        GetOsdController()->DrawCells(cells);
+        GetOsdController().DrawCells(cells);
     }
 
 private:

@@ -7,7 +7,7 @@ extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 std::array<Uart*, Uart::kMaxInstances> Uart::s_instances{};
 
-Uart::Uart(UART_HandleTypeDef& handle, std::shared_ptr<IReader> reader)
+Uart::Uart(UART_HandleTypeDef& handle, IReader& reader)
     : m_handle(handle)
     , m_reader(reader)
 {
@@ -36,7 +36,7 @@ void Uart::DispatchRxComplete(UART_HandleTypeDef* huart)
 
 void Uart::onRxComplete()
 {
-    m_reader->OnByte(m_currentByte);
+    m_reader.OnByte(m_currentByte);
     HAL_UART_Receive_IT(&m_handle, &m_currentByte, 1);
 }
 
