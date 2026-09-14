@@ -22,7 +22,7 @@ struct GyroscopeAccelerometer
     Accelerometer acc;
 };
 
-static GyroscopeAccelerometer operator+(const GyroscopeAccelerometer& a, const GyroscopeAccelerometer& b)
+inline GyroscopeAccelerometer operator+(const GyroscopeAccelerometer& a, const GyroscopeAccelerometer& b)
 {
     GyroscopeAccelerometer res{};
     res.gyro.x = a.gyro.x + b.gyro.x;
@@ -36,7 +36,7 @@ static GyroscopeAccelerometer operator+(const GyroscopeAccelerometer& a, const G
     return res;
 }
 
-static GyroscopeAccelerometer operator*(const GyroscopeAccelerometer& a, float mult)
+inline GyroscopeAccelerometer operator*(const GyroscopeAccelerometer& a, float mult)
 {
     GyroscopeAccelerometer res = a;
     res.gyro.x *= mult;

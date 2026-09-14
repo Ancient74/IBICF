@@ -104,22 +104,18 @@ private:
     CompensationParameters2 m_params2{};
 };
 
-static BME280::Measurements operator+(const BME280::Measurements& a, const BME280::Measurements& b)
+inline BME280::Measurements operator+(const BME280::Measurements& a, const BME280::Measurements& b)
 {
-    BME280::Measurements res{};
-    res.humidity = a.humidity + b.humidity;
-    res.pressure = a.pressure + b.pressure;
-    res.temperature = a.temperature + b.temperature;
-
-    return res;
+    return { a.pressure + b.pressure, a.temperature + b.temperature, a.humidity + b.humidity };
 }
 
-static BME280::Measurements operator*(const BME280::Measurements& a, float mult)
+inline BME280::Measurements operator*(const BME280::Measurements& a, float mult)
 {
-    BME280::Measurements res = a;
-    res.humidity = static_cast<uint32_t>(std::lround(a.humidity * mult));
-    res.pressure = static_cast<uint32_t>(std::lround(a.pressure * mult));
-    res.temperature = static_cast<uint32_t>(std::lround(a.temperature * mult));
-
-    return res;
+    return {
+        static_cast<uint32_t>(std::lround(a.pressure * mult)),
+        static_cast<uint32_t>(std::lround(a.temperature * mult)),
+        static_cast<uint32_t>(std::lround(a.humidity * mult))
+    };
 }
+
+

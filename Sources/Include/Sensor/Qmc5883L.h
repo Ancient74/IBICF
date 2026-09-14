@@ -9,14 +9,14 @@ struct Magnetometer
     float z;
 };
 
-static Magnetometer operator+(const Magnetometer& a, const Magnetometer& b)
+inline Magnetometer operator+(const Magnetometer& a, const Magnetometer& b)
 {
     return { a.x + b.x, a.y + b.y, a.z + b.z };
 }
 
-static Magnetometer operator*(const Magnetometer& a, float mult)
+inline Magnetometer operator*(const Magnetometer& a, float mult)
 {
-    return {a.x * mult, a.y * mult, a.z * mult};
+    return { a.x * mult, a.y * mult, a.z * mult };
 }
 
 class Qmc5883L : private I2cSensor
