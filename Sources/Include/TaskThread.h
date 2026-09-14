@@ -1,50 +1,48 @@
 #pragma once
-
 #include <atomic>
 #include <concepts>
-
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
 
-template<typename Derived, uint16_t StackDepth, UBaseType_t Priority, bool Periodic = true>
-class CommonTask
+template<typename Logic, uint16_t StackDepth, UBaseType_t Priority, bool Periodic = true>
+class TaskThread
 {
 public:
-    CommonTask(const char* taskName, TickType_t period)
-        : m_taskName(taskName), m_period(period) {}
+    TaskThread(const char* taskName, TickType_t period, Logic& logic)
+        : m_taskName(taskName), m_period(period), m_logic(logic) {}
 
-    ~CommonTask()
+    ~TaskThread()
     {
         configASSERT(!m_started.load(std::memory_order_acquire) &&
-                     "Derived::~Derived() must call Stop() before returning");
-        Stop();
+                     "Owner must call Stop() before its own members are torn down");
     }
 
-    CommonTask(const CommonTask&) = delete;
-    CommonTask& operator=(const CommonTask&) = delete;
+    TaskThread(const TaskThread&) = delete;
+    TaskThread& operator=(const TaskThread&) = delete;
+    TaskThread(TaskThread&&) = delete;
+    TaskThread& operator=(TaskThread&&) = delete;
 
     void Start()
     {
+        static_assert(requires(Logic& l) {
+            { l.RunTaskIteration() } -> std::same_as<void>;
+        }, "Logic must provide void RunTaskIteration()");
+
         bool expected = false;
         configASSERT(m_started.compare_exchange_strong(expected, true) &&
                      "Start() called twice / concurrently");
-
-        static_assert(requires(Derived& task) {
-            { task.RunTaskIteration() } -> std::same_as<void>;
-        });
 
         m_isFinishing.store(false, std::memory_order_relaxed); // allow restart
 
         m_doneSem = xSemaphoreCreateBinaryStatic(&m_semBuffer);
         configASSERT(m_doneSem != nullptr);
 
-        m_task = xTaskCreateStatic(&CommonTask::TaskLoop, m_taskName, StackDepth,
+        m_task = xTaskCreateStatic(&TaskThread::TaskLoop, m_taskName, StackDepth,
                                     this, Priority, m_stack, &m_taskTCB);
         configASSERT(m_task != nullptr);
     }
 
-protected:
     void Stop()
     {
         bool expected = true;
@@ -61,13 +59,12 @@ protected:
 private:
     static void TaskLoop(void* arg)
     {
-        auto* self = static_cast<CommonTask*>(arg);
-        auto* derived = static_cast<Derived*>(self);
+        auto* self = static_cast<TaskThread*>(arg);
 
         TickType_t lastWakeTime = xTaskGetTickCount();
         while (!self->m_isFinishing.load(std::memory_order_acquire))
         {
-            derived->RunTaskIteration();
+            self->m_logic.RunTaskIteration();
             if constexpr (Periodic)
                 vTaskDelayUntil(&lastWakeTime, self->m_period);
         }
@@ -78,10 +75,12 @@ private:
 
     const char* m_taskName;
     TickType_t m_period;
+    Logic& m_logic;
+
     TaskHandle_t m_task{};
     SemaphoreHandle_t m_doneSem{};
     std::atomic_bool m_isFinishing = false;
-    std::atomic_bool m_started =false;
+    std::atomic_bool m_started = false;
 
     alignas(portBYTE_ALIGNMENT) StackType_t m_stack[StackDepth]{};
     StaticTask_t m_taskTCB{};

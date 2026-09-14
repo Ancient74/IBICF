@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "Qmc5883L.h"
 #include "Mpu6050.h"
+#include "TaskThread.h"
 #include <optional>
 #include <KalmanLib/MultiplicativeExtendedKalmanFilter.hpp>
 
@@ -71,9 +72,10 @@ private:
 template<uint8_t MaxSubs>
 class SensorFusionNode
     : public NodeOutput<SensorFusionNode<MaxSubs>, Quaternion<float>, MaxSubs>
-    , public CommonTask<SensorFusionNode<MaxSubs>, 128, configMAX_PRIORITIES / 2 - 4>
 {
 public:
+    void Start() { m_thread.Start(); }
+    void Stop() { m_thread.Stop(); }
     struct ImuPort : NodeInput<ImuPort, GyroscopeAccelerometer>
     {
         using InputType = GyroscopeAccelerometer;
@@ -92,7 +94,7 @@ public:
     using OutputType = Quaternion<float>;
 
     SensorFusionNode(const char* taskName, float nominalDt, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
-        : CommonTask<SensorFusionNode, 128, configMAX_PRIORITIES / 2 - 4>(taskName, 0)
+        : m_thread(taskName, 0, *this)
         , m_core(accelR, magnetR, N), m_nominalDt(nominalDt)
     {
         m_sampleQueue = xQueueCreateStatic(Config::SENSOR_FUSION_NODE_QUEUE_SIZE, sizeof(FusionSample), m_sampleQueueStorage, &m_sampleQueueBuffer);
@@ -160,6 +162,8 @@ private:
         item.mag = s;
         xQueueSend(m_sampleQueue, &item, 0);
     }
+
+    TaskThread<SensorFusionNode<MaxSubs>, 128, configMAX_PRIORITIES / 2 - 4> m_thread;
 
     ImuPort m_imuPort{this};
     MagPort m_magPort{this};

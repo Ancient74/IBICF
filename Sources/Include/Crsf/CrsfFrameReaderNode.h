@@ -1,7 +1,7 @@
 #pragma once
 #include "CrsfLib/Frame.hpp"
-#include "CommonTask.h"
 #include "Uart.h"
+#include "TaskThread.h"
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
@@ -11,7 +11,6 @@
 
 class CrsfFrameReaderNode
     : public IReader
-    , public CommonTask<CrsfFrameReaderNode, 128, configMAX_PRIORITIES / 2 - 2, false>
     , public NodeOutput<CrsfFrameReaderNode, uint8_t, 1>
 {
 public:
@@ -19,8 +18,12 @@ public:
     ~CrsfFrameReaderNode();
     void OnByte(uint8_t byte) override;
 
+    void Start() { m_thread.Start(); }
+    void Stop() { m_thread.Stop(); }
+
     void RunTaskIteration();
 private:
+    TaskThread<CrsfFrameReaderNode, 128, configMAX_PRIORITIES / 2 - 2, false> m_thread;
     StreamBufferHandle_t m_streamBuffer;
     StaticStreamBuffer_t m_streamBufferBuffer;
     uint8_t m_buffer[Config::CRSF_READER_BUFFER_SIZE];

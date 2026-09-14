@@ -1,6 +1,6 @@
 #pragma once
 #include "FreeRTOSConfig.h"
-#include <CommonTask.h>
+#include "TaskThread.h"
 #include "PubSubLib/Node.hpp"
 #include <optional>
 #include <span>
@@ -71,13 +71,15 @@ static_assert(sizeof(TrampTemperature) == 10);
 #pragma pack(pop)
 
 class TrampFrameParser
-    : public CommonTask<TrampFrameParser, 64, configMAX_PRIORITIES / 2, false>
-    , public NodeInput<TrampFrameParser, uint8_t>
+    : public NodeInput<TrampFrameParser, uint8_t>
     , public NodeOutput<TrampFrameParser, TrampFrame, 1>
 {
 public:
     TrampFrameParser(const char* taskName);
     ~TrampFrameParser();
+
+    void Start() { m_thread.Start(); }
+    void Stop() { m_thread.Stop(); }
 
     void Process(uint8_t byte);
     void RunTaskIteration();
@@ -92,6 +94,8 @@ private:
         Checksum,
         Footer
     } m_state = TrampFrameParser::State::SyncFrame;
+    TaskThread<TrampFrameParser, 64, configMAX_PRIORITIES / 2, false> m_thread;
+
     QueueHandle_t m_inputQueue;
     StaticQueue_t m_inputQueueBuffer;
     uint8_t m_inputQueueStorage[sizeof(TrampFrame) * 2];
@@ -108,13 +112,15 @@ enum class TrampConnectionState
 };
 
 class TrampProtocolController
-    : public CommonTask<TrampProtocolController, 128, configMAX_PRIORITIES / 2>
-    , public NodeInput<TrampProtocolController, TrampFrame>
+    : public NodeInput<TrampProtocolController, TrampFrame>
     , public NodeOutput<TrampProtocolController, std::span<const uint8_t>, 1>
 {
 public:
     TrampProtocolController(const char* taskName);
     ~TrampProtocolController();
+
+    void Start() { m_thread.Start(); }
+    void Stop() { m_thread.Stop(); }
 
     void RunTaskIteration();
     void Process(const TrampFrame& frame);
@@ -147,6 +153,8 @@ private:
     void InvalidateStatus();
     void MarkResponseReceived();
     bool HasResponseTimedOut() const;
+
+    TaskThread<TrampProtocolController, 128, configMAX_PRIORITIES / 2> m_thread;
 
     std::atomic<TrampConnectionState> m_connectionState = TrampConnectionState::Offline;
     std::atomic<TickType_t> m_lastResponseTick = 0;

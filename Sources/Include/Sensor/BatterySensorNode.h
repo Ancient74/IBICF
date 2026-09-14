@@ -1,6 +1,6 @@
 #pragma once
 #include "AdcSensor.h"
-#include "CommonTask.h"
+#include "TaskThread.h"
 #include "Config.h"
 #include "PubSubLib/Node.hpp"
 #include <array>
@@ -16,13 +16,10 @@ struct BatteryInfo
 template<float MaxBatteryVoltage, float AdcInMaxVoltage>
 class BatterySensorNode
     : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, BatteryInfo, 1>
-    , public CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2>
 {
-    using Base = CommonTask<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2>;
-
 public:
     BatterySensorNode(AdcSensor& adcSensor, const char* taskName, uint32_t samplingRateHz)
-        : Base(taskName, pdMS_TO_TICKS(1000 / samplingRateHz))
+        : m_thread(taskName, pdMS_TO_TICKS(1000 / samplingRateHz), *this)
         , m_adcSensor(adcSensor)
     {
         const uint32_t adcConversionRateHz = m_adcSensor.GetSamplingRate();
@@ -48,6 +45,9 @@ public:
         m_extraBits = extraBits;
         m_effectiveMaxCode = (1u << (m_adcSensor.GetAdcResolutionBits() + extraBits)) - 1u;
     }
+
+    void Start() { m_thread.Start(); }
+    void Stop() { m_thread.Stop(); }
 
     void RunTaskIteration()
     {
@@ -77,6 +77,7 @@ public:
     }
 
 private:
+    TaskThread<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2> m_thread;
     AdcSensor& m_adcSensor;
     std::array<uint16_t, Config::BATTERY_ADC_OVERSAMPLING_RATIO> m_buffer{};
     uint32_t m_oversampleCount = 0;

@@ -1,5 +1,4 @@
 #include "HalfDuplexSoftwareUart.h"
-#include "CommonTask.h"
 #include "Config.h"
 #include "projdefs.h"
 #include "stm32f4xx_hal_gpio.h"
@@ -25,7 +24,7 @@ extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port, TIM_HandleTypeDef& timer, uint32_t baudRate)
-    : CommonTask<HalfDuplexSoftwareUart, 128, configMAX_PRIORITIES / 2 - 10>("HalfDuplexUart", 0)
+    : m_thread("HalfDuplexUart", 0, *this)
     , m_pin(pin)
     , m_port(port)
     , m_timer(timer)

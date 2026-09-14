@@ -1,20 +1,17 @@
 #pragma once
 #include <array>
 #include <cstdint>
-#include "CommonTask.h"
+#include "TaskThread.h"
 #include "OsdRenderer.h"
 
 template<uint8_t RenderersAmount>
-class OsdCompositorTask : public CommonTask<OsdCompositorTask<RenderersAmount>, 256, configMAX_PRIORITIES / 2 - 2>
+class OsdCompositorTask
 {
-    using Base = CommonTask<OsdCompositorTask<RenderersAmount>, 256, configMAX_PRIORITIES / 2 - 2>;
-    using Base::Start;
-
 public:
     OsdCompositorTask(const char* taskName, uint16_t updateRateHz)
-        : Base(taskName, pdMS_TO_TICKS(1000 / updateRateHz)) {}
+        : m_thread(taskName, pdMS_TO_TICKS(1000 / updateRateHz), *this) {}
 
-    ~OsdCompositorTask() { this->Stop(); }
+    ~OsdCompositorTask() { m_thread.Stop(); }
 
     void Register(IOsdRenderable& renderable)
     {
@@ -22,7 +19,8 @@ public:
         m_renderables[m_count++] = &renderable;
     }
 
-    void StartCompositor() { Base::Start(); }
+    void StartCompositor() { m_thread.Start(); }
+    void StopCompositor() { m_thread.Stop(); }
 
     void RunTaskIteration()
     {
@@ -31,6 +29,7 @@ public:
     }
 
 private:
+    TaskThread<OsdCompositorTask<RenderersAmount>, 256, configMAX_PRIORITIES / 2 - 2> m_thread;
     std::array<IOsdRenderable*, RenderersAmount> m_renderables{};
     uint8_t m_count{0};
 };
