@@ -73,11 +73,9 @@ extern "C" void main_cpp()
 
     mpuSensor.Calibrate(accelR, N);
     static SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
-    static EmaFilterNode<GyroscopeAccelerometer, 1> mpuFilterNode{0.1f, 5};
 
     static Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
     static SensorSamplingNode<Qmc5883L, Magnetometer, 1> qmcNode{qmcSensor, "QMC"};
-    static EmaFilterNode<Magnetometer, 1> qmcFilterNode{0.1f, 1};
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
     {
         qmcSensor.Start();
@@ -87,13 +85,11 @@ extern "C" void main_cpp()
 
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
     {
-        Connect(qmcNode, qmcFilterNode);
-        Connect(qmcFilterNode, fusion.MagInput());
+        Connect(qmcNode, fusion.MagInput());
         qmcNode.Start();
     }
 
-    Connect(mpuNode, mpuFilterNode);
-    Connect(mpuFilterNode, fusion.ImuInput());
+    Connect(mpuNode, fusion.ImuInput());
     mpuNode.Start();
 
     static BME280 bmeSensor{hi2c2, bus.Mutex()};
