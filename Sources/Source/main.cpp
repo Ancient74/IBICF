@@ -43,18 +43,18 @@ using namespace std::chrono_literals;
 
 extern "C" void main_cpp()
 {
-    ServoPwmControl leftAileronControl{htim4, TIM_CHANNEL_1, 500us, 2500us};
-    ServoPwmControl rightAileronControl{htim4, TIM_CHANNEL_2, 500us, 2500us};
-    ServoPwmControl leftRuddervatorControl{htim4, TIM_CHANNEL_3, 500us, 2500us};
-    ServoPwmControl rightRuddervatorControl{htim4, TIM_CHANNEL_4, 500us, 2500us};
+    static ServoPwmControl leftAileronControl{htim4, TIM_CHANNEL_1, 500us, 2500us};
+    static ServoPwmControl rightAileronControl{htim4, TIM_CHANNEL_2, 500us, 2500us};
+    static ServoPwmControl leftRuddervatorControl{htim4, TIM_CHANNEL_3, 500us, 2500us};
+    static ServoPwmControl rightRuddervatorControl{htim4, TIM_CHANNEL_4, 500us, 2500us};
 
-    ThrustController thrust{htim3, TIM_CHANNEL_1};
+    static ThrustController thrust{htim3, TIM_CHANNEL_1};
 
-    SurfaceController leftAileron{leftAileronControl};
-    SurfaceController rightAileron{rightAileronControl};
-    SurfaceController leftRuddervator{leftRuddervatorControl};
-    SurfaceController rightRuddervator{rightRuddervatorControl};
-    PlaneModel model{
+    static SurfaceController leftAileron{leftAileronControl};
+    static SurfaceController rightAileron{rightAileronControl};
+    static SurfaceController leftRuddervator{leftRuddervatorControl};
+    static SurfaceController rightRuddervator{rightRuddervatorControl};
+    static PlaneModel model{
         leftAileron,
         rightAileron,
         leftRuddervator,
@@ -62,8 +62,8 @@ extern "C" void main_cpp()
         thrust
     };
 
-    I2cBus bus{hi2c2};
-    Mpu6050 mpuSensor{hi2c2, bus.Mutex()};
+    static I2cBus bus{hi2c2};
+    static Mpu6050 mpuSensor{hi2c2, bus.Mutex()};
     mpuSensor.Start();
 
     Matrix3f accelR{};
@@ -72,19 +72,18 @@ extern "C" void main_cpp()
     auto samplingRate = mpuSensor.GetSamplingRate();
 
     mpuSensor.Calibrate(accelR, N);
-    SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
-    EmaFilterNode<GyroscopeAccelerometer, 1> mpuFilterNode{0.1f, 5};
+    static SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
+    static EmaFilterNode<GyroscopeAccelerometer, 1> mpuFilterNode{0.1f, 5};
 
-
-    Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
-    SensorSamplingNode<Qmc5883L, Magnetometer, 1> qmcNode{qmcSensor, "QMC"};
-    EmaFilterNode<Magnetometer, 1> qmcFilterNode{0.1f, 1};
+    static Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
+    static SensorSamplingNode<Qmc5883L, Magnetometer, 1> qmcNode{qmcSensor, "QMC"};
+    static EmaFilterNode<Magnetometer, 1> qmcFilterNode{0.1f, 1};
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
     {
         qmcSensor.Start();
         qmcSensor.GetSensorVariance(magnetR);
     }
-    SensorFusionNode<2> fusion{"Fusion", 1.0f / samplingRate, accelR, magnetR, N};
+    static SensorFusionNode<2> fusion{"Fusion", 1.0f / samplingRate, accelR, magnetR, N};
 
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
     {
@@ -97,11 +96,11 @@ extern "C" void main_cpp()
     Connect(mpuFilterNode, fusion.ImuInput());
     mpuNode.Start();
 
-    BME280 bmeSensor{hi2c2, bus.Mutex()};
+    static BME280 bmeSensor{hi2c2, bus.Mutex()};
 
-    SensorSamplingNode<BME280, BME280::Measurements, 1> bmeNode{bmeSensor, "BME"};
-    EmaFilterNode<BME280::Measurements, 1> bmeFilterNode{0.1f, 5};
-    PressureToAltitudeConverterNode<2> altitudeNode;
+    static SensorSamplingNode<BME280, BME280::Measurements, 1> bmeNode{bmeSensor, "BME"};
+    static EmaFilterNode<BME280::Measurements, 1> bmeFilterNode{0.1f, 5};
+    static PressureToAltitudeConverterNode<2> altitudeNode;
     bool useBme = false;
     if(bmeSensor.Start() == Status::Ok)
     {
@@ -112,29 +111,29 @@ extern "C" void main_cpp()
         bmeNode.Start();
     }
 
-    AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
-    BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
+    static AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
+    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
 
-    OsdResponseReader osdReader{};
-    Uart osdUart{huart2, osdReader};
-    OsdModule osdModule{osdUart, osdReader};
-    OsdController osdController{osdModule};
-    OsdHorizonNode osdHorizonNode{osdController};
-    OsdBatteryVoltageNode osdBatteryInfoNode{osdController};
-    OsdFlightModeNode osdFlightModeNode{osdController};
-    OsdRcLinkNode osdRcLinkNode{osdController};
-    OsdAltitudeNode osdAltitudeNode{osdController};
+    static OsdResponseReader osdReader{};
+    static Uart osdUart{huart2, osdReader};
+    static OsdModule osdModule{osdUart, osdReader};
+    static OsdController osdController{osdModule};
+    static OsdHorizonNode osdHorizonNode{osdController};
+    static OsdBatteryVoltageNode osdBatteryInfoNode{osdController};
+    static OsdFlightModeNode osdFlightModeNode{osdController};
+    static OsdRcLinkNode osdRcLinkNode{osdController};
+    static OsdAltitudeNode osdAltitudeNode{osdController};
 
-    OsdCompositorTask<6> osdCompositorTask{"OsdRenderer", Config::OSD_REFRESH_RATE_HZ};
+    static OsdCompositorTask<6> osdCompositorTask{"OsdRenderer", Config::OSD_REFRESH_RATE_HZ};
     osdCompositorTask.Register(osdHorizonNode);
     osdCompositorTask.Register(osdBatteryInfoNode);
     osdCompositorTask.Register(osdFlightModeNode);
     osdCompositorTask.Register(osdRcLinkNode);
 
-    ManualFlightMode lowPosFlightMode{};
-    ManualFlightMode midPosFlightMode{};
-    CruiseFlightMode highPosFlightMode{"CruiseFlightMode"};
-    FailsafeFlightMode failsafeFlightMode{"FailSafeMode"};
+    static ManualFlightMode lowPosFlightMode{};
+    static ManualFlightMode midPosFlightMode{};
+    static CruiseFlightMode highPosFlightMode{"CruiseFlightMode"};
+    static FailsafeFlightMode failsafeFlightMode{"FailSafeMode"};
 
     Connect(fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(highPosFlightMode));
 
@@ -148,30 +147,30 @@ extern "C" void main_cpp()
     Connect(fusion, osdHorizonNode);
     Connect(batterySensor, osdBatteryInfoNode);
 
-    HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim10};
-    TrampFrameParser trampParser{"TrampFrameParser"};
-    TrampProtocolController trampProtocolController{"TrampProtocol"};
+    static HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim10};
+    static TrampFrameParser trampParser{"TrampFrameParser"};
+    static TrampProtocolController trampProtocolController{"TrampProtocol"};
     Connect(swUart, trampParser);
     Connect(trampProtocolController, swUart);
-    OsdVtxInfo osdVtxNode{osdController, trampProtocolController};
+    static OsdVtxInfo osdVtxNode{osdController, trampProtocolController};
     osdCompositorTask.Register(osdVtxNode);
 
     fusion.Start();
     batterySensor.Start();
 
-    CrsfFrameReaderNode crsfFrameReader{"CrsfReader"};
-    CrsfLib::FrameParserNode crsfFrameParser{};
-    CrsfFrameProcessorNode<2> crsfFrameProcessor{};
-    Uart crsfUart{huart1, crsfFrameReader};
-    DeviceInfoWriteNode crsfDeviceInfo{crsfUart};
+    static CrsfFrameReaderNode crsfFrameReader{"CrsfReader"};
+    static CrsfLib::FrameParserNode crsfFrameParser{};
+    static CrsfFrameProcessorNode<2> crsfFrameProcessor{};
+    static Uart crsfUart{huart1, crsfFrameReader};
+    static DeviceInfoWriteNode crsfDeviceInfo{crsfUart};
 
     Connect(crsfFrameReader, crsfFrameParser);
     Connect(crsfFrameParser, crsfFrameProcessor);
     Connect(crsfFrameProcessor.GetDeviceInfoNode(), crsfDeviceInfo);
     crsfFrameReader.Start();
 
-    VtxControllerNode vtxControllerNode{trampProtocolController};
-    PlaneControllerNode planeControllerNode{model,
+    static VtxControllerNode vtxControllerNode{trampProtocolController};
+    static PlaneControllerNode planeControllerNode{model,
         lowPosFlightMode,
         midPosFlightMode,
         highPosFlightMode,
