@@ -3,6 +3,7 @@
 #include "TaskThread.h"
 #include "Config.h"
 #include "PubSubLib/Node.hpp"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <span>
@@ -13,10 +14,13 @@ struct BatteryInfo
     uint8_t percentLevel;
 };
 
-template<float MaxBatteryVoltage, float AdcInMaxVoltage>
+template<float MaxBatteryVoltage, float MinBatteryVoltage, float AdcInMaxVoltage>
 class BatterySensorNode
-    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, BatteryInfo, 1>
+    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, BatteryInfo, 1>
 {
+    static_assert(MaxBatteryVoltage > MinBatteryVoltage,
+        "MaxBatteryVoltage must be greater than MinBatteryVoltage");
+
 public:
     BatterySensorNode(AdcSensor& adcSensor, const char* taskName, uint32_t samplingRateHz)
         : m_thread(taskName, pdMS_TO_TICKS(1000 / samplingRateHz), *this)
@@ -59,9 +63,7 @@ public:
 
         uint32_t sum = 0;
         for (uint32_t i = 0; i < m_oversampleCount; ++i)
-        {
             sum += m_buffer[i];
-        }
 
         const uint32_t extendedCode = sum >> m_extraBits;
 
@@ -69,15 +71,21 @@ public:
             (static_cast<float>(extendedCode) / static_cast<float>(m_effectiveMaxCode))
             * AdcInMaxVoltage;
 
-        const float batteryVoltage = adcVoltage * (MaxBatteryVoltage / AdcInMaxVoltage);
-        const float chargePercent = batteryVoltage / MaxBatteryVoltage * 100.0f;
-        const uint8_t percentLevel = static_cast<uint8_t>(chargePercent + 0.5f);
+        const float batteryVoltage = std::clamp(
+            adcVoltage * (MaxBatteryVoltage / AdcInMaxVoltage),
+            MinBatteryVoltage, MaxBatteryVoltage);
+
+        constexpr float voltageRange = MaxBatteryVoltage - MinBatteryVoltage;
+        const float chargePercentRaw =
+            (batteryVoltage - MinBatteryVoltage) / voltageRange * 100.0f;
+        const float chargePercentClamped = std::clamp(chargePercentRaw, 0.0f, 100.0f);
+        const uint8_t percentLevel = static_cast<uint8_t>(chargePercentClamped + 0.5f);
 
         this->Publish({batteryVoltage, percentLevel});
     }
 
 private:
-    TaskThread<BatterySensorNode<MaxBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2> m_thread;
+    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2> m_thread;
     AdcSensor& m_adcSensor;
     std::array<uint16_t, Config::BATTERY_ADC_OVERSAMPLING_RATIO> m_buffer{};
     uint32_t m_oversampleCount = 0;

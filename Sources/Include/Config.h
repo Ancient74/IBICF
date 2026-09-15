@@ -7,7 +7,8 @@ namespace Config
     constexpr uint32_t BATTERY_MAX_USEFUL_EXTRA_BITS = 4;
     constexpr uint32_t BATTERY_ADC_OVERSAMPLING_RATIO = 1u << (2 * BATTERY_MAX_USEFUL_EXTRA_BITS);
     constexpr float BATTERY_MAX_VOLTAGE = 25.2f;
-    constexpr float BATTERY_ADC_MAX_VOLTAGE = 3.0f;
+    constexpr float BATTERY_MIN_VOLTAGE = 22.2f;
+    constexpr float BATTERY_ADC_MAX_VOLTAGE = 2.965f;
     constexpr uint32_t BATTERY_SAMPLING_RATE_HZ = 20;
 
     constexpr uint16_t SW_UART_QUEUE_SIZE = 256;

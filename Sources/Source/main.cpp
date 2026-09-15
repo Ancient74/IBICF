@@ -108,7 +108,7 @@ extern "C" void main_cpp()
     }
 
     static AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
-    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
+    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
 
     static OsdResponseReader osdReader{};
     static Uart osdUart{huart2, osdReader};
