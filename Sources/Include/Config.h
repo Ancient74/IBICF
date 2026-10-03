@@ -1,4 +1,6 @@
 #pragma once
+#include "FreeRTOS.h"
+#include "task.h"
 
 namespace Config
 {
@@ -59,4 +61,37 @@ namespace Config
     constexpr int32_t  FAILSAFE_HOLD_THRUST = 30;
     constexpr uint32_t RC_LINK_TIMEOUT_MS = 400;
     constexpr uint32_t FAILSAFE_OUTPUT_PUSH_PERIOD_MS = 20;
+
+    namespace Task
+    {
+        constexpr uint16_t HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE = 128;
+        constexpr UBaseType_t HALF_DUPLEX_SOFTWARE_UART_PRIORITY = configMAX_PRIORITIES / 2 - 10;
+
+        constexpr uint16_t CRUISE_FLIGHT_MODE_STACK_SIZE = 128;
+        constexpr UBaseType_t CRUISE_FLIGHT_MODE_PRIORITY = configMAX_PRIORITIES / 2 - 9;
+
+        constexpr uint16_t CRSF_FRAME_READER_NODE_STACK_SIZE = 128;
+        constexpr UBaseType_t CRSF_FRAME_READER_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 2;
+
+        constexpr uint16_t FAILSAFE_FLIGHT_MODE_STACK_SIZE = 128;
+        constexpr UBaseType_t FAILSAFE_FLIGHT_MODE_PRIORITY = configMAX_PRIORITIES / 2 - 9;
+
+        constexpr uint16_t BATTERY_SENSOR_NODE_STACK_SIZE = 128;
+        constexpr UBaseType_t BATTERY_SENSOR_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 2;
+
+        constexpr uint16_t TRAMP_FRAME_PARSER_STACK_SIZE = 64;
+        constexpr UBaseType_t TRAMP_FRAME_PARSER_PRIORITY = configMAX_PRIORITIES / 2;
+
+        constexpr uint16_t TRAMP_PROTOCOL_CONTROLLER_STACK_SIZE = 128;
+        constexpr UBaseType_t TRAMP_PROTOCOL_CONTROLLER_PRIORITY = configMAX_PRIORITIES / 2;
+
+        constexpr uint16_t OSD_COMPOSITOR_TASK_STACK_SIZE = 256;
+        constexpr UBaseType_t OSD_COMPOSITOR_TASK_PRIORITY = configMAX_PRIORITIES / 2 - 2;
+
+        constexpr uint16_t SENSOR_FUSION_NODE_STACK_SIZE = 128;
+        constexpr UBaseType_t SENSOR_FUSION_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 4;
+
+        constexpr uint16_t SENSOR_SAMPLING_NODE_STACK_SIZE = 128;
+        constexpr UBaseType_t SENSOR_SAMPLING_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 4;
+    }
 }

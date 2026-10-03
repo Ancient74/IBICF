@@ -163,7 +163,7 @@ private:
         xQueueSend(m_sampleQueue, &item, 0);
     }
 
-    TaskThread<SensorFusionNode<MaxSubs>, 128, configMAX_PRIORITIES / 2 - 4> m_thread;
+    TaskThread<SensorFusionNode<MaxSubs>, Config::Task::SENSOR_FUSION_NODE_STACK_SIZE, Config::Task::SENSOR_FUSION_NODE_PRIORITY> m_thread;
 
     ImuPort m_imuPort{this};
     MagPort m_magPort{this};

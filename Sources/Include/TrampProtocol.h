@@ -1,6 +1,7 @@
 #pragma once
 #include "FreeRTOSConfig.h"
 #include "TaskThread.h"
+#include "Config.h"
 #include "PubSubLib/Node.hpp"
 #include <optional>
 #include <span>
@@ -94,7 +95,7 @@ private:
         Checksum,
         Footer
     } m_state = TrampFrameParser::State::SyncFrame;
-    TaskThread<TrampFrameParser, 64, configMAX_PRIORITIES / 2, false> m_thread;
+    TaskThread<TrampFrameParser, Config::Task::TRAMP_FRAME_PARSER_STACK_SIZE, Config::Task::TRAMP_FRAME_PARSER_PRIORITY, false> m_thread;
 
     QueueHandle_t m_inputQueue;
     StaticQueue_t m_inputQueueBuffer;
@@ -154,7 +155,7 @@ private:
     void MarkResponseReceived();
     bool HasResponseTimedOut() const;
 
-    TaskThread<TrampProtocolController, 128, configMAX_PRIORITIES / 2> m_thread;
+    TaskThread<TrampProtocolController, Config::Task::TRAMP_PROTOCOL_CONTROLLER_STACK_SIZE, Config::Task::TRAMP_PROTOCOL_CONTROLLER_PRIORITY> m_thread;
 
     std::atomic<TrampConnectionState> m_connectionState = TrampConnectionState::Offline;
     std::atomic<TickType_t> m_lastResponseTick = 0;

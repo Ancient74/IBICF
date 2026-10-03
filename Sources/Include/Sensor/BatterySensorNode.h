@@ -85,7 +85,7 @@ public:
     }
 
 private:
-    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, 128, configMAX_PRIORITIES / 2 - 2> m_thread;
+    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, Config::Task::BATTERY_SENSOR_NODE_STACK_SIZE, Config::Task::BATTERY_SENSOR_NODE_PRIORITY> m_thread;
     AdcSensor& m_adcSensor;
     std::array<uint16_t, Config::BATTERY_ADC_OVERSAMPLING_RATIO> m_buffer{};
     uint32_t m_oversampleCount = 0;

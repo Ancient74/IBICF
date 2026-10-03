@@ -1,6 +1,7 @@
 #pragma once
 #include "FlightMode.h"
 #include "TaskThread.h"
+#include "Config.h"
 #include "KalmanLib/PidController.hpp"
 #include "KalmanLib/Quaternion.hpp"
 #include "PubSubLib/Node.hpp"
@@ -26,7 +27,7 @@ public:
     const char* GetName() const override;
 
 private:
-    TaskThread<FailsafeFlightMode, 128, configMAX_PRIORITIES / 2 - 9> m_thread;
+    TaskThread<FailsafeFlightMode, Config::Task::FAILSAFE_FLIGHT_MODE_STACK_SIZE, Config::Task::FAILSAFE_FLIGHT_MODE_PRIORITY> m_thread;
 
     std::atomic<float> m_currentRollRad = 0.0f;
     std::atomic<float> m_currentPitchRad = 0.0f;

@@ -4,6 +4,7 @@
 #include "SensorStatus.h"
 #include "SensorConcepts.h"
 #include "TaskThread.h"
+#include "Config.h"
 #include <PubSubLib/Node.hpp>
 
 template<typename SensorT, typename SensorOutputT, uint8_t MaxSubs>
@@ -36,6 +37,6 @@ public:
         }
     }
 
-    TaskThread<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, 128, configMAX_PRIORITIES / 2 - 4> m_thread;
+    TaskThread<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, Config::Task::SENSOR_SAMPLING_NODE_STACK_SIZE, Config::Task::SENSOR_SAMPLING_NODE_PRIORITY> m_thread;
     SensorT& m_sensor;
 };

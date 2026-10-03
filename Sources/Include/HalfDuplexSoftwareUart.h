@@ -33,7 +33,7 @@ private:
     void DelayPeriod(uint16_t period);
     void ArmExti();
 
-    TaskThread<HalfDuplexSoftwareUart, 128, configMAX_PRIORITIES / 2 - 10> m_thread;
+    TaskThread<HalfDuplexSoftwareUart, Config::Task::HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE, Config::Task::HALF_DUPLEX_SOFTWARE_UART_PRIORITY> m_thread;
 
     QueueHandle_t m_writeQueue;
     StaticQueue_t m_writeQueueBuffer;

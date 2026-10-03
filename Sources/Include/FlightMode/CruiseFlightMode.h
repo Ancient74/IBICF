@@ -30,7 +30,7 @@ public:
     void RunTaskIteration();
 
 private:
-    TaskThread<CruiseFlightMode, 128, configMAX_PRIORITIES / 2 - 9> m_thread;
+    TaskThread<CruiseFlightMode, Config::Task::CRUISE_FLIGHT_MODE_STACK_SIZE, Config::Task::CRUISE_FLIGHT_MODE_PRIORITY> m_thread;
 
     std::atomic<float> m_currentRollRad = 0.0f;
     std::atomic<float> m_currentPitchRad = 0.0f;

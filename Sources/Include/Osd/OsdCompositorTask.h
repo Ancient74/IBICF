@@ -2,6 +2,7 @@
 #include <array>
 #include <cstdint>
 #include "TaskThread.h"
+#include "Config.h"
 #include "OsdRenderer.h"
 
 template<uint8_t RenderersAmount>
@@ -29,7 +30,7 @@ public:
     }
 
 private:
-    TaskThread<OsdCompositorTask<RenderersAmount>, 256, configMAX_PRIORITIES / 2 - 2> m_thread;
+    TaskThread<OsdCompositorTask<RenderersAmount>, Config::Task::OSD_COMPOSITOR_TASK_STACK_SIZE, Config::Task::OSD_COMPOSITOR_TASK_PRIORITY> m_thread;
     std::array<IOsdRenderable*, RenderersAmount> m_renderables{};
     uint8_t m_count{0};
 };
