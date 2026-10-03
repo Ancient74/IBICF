@@ -18,9 +18,10 @@ namespace
     constexpr uint16_t MPU6050_ACCEL_XOUT_H = 0X3B;
     constexpr uint16_t MPU6050_PWR_MGMT_1 = 0X6B;
 
-    constexpr uint8_t CLOCK_PRESCALER = 8-1;
-    constexpr uint8_t DLPF_VALUE = 0;
+    constexpr uint8_t DLPF_VALUE = 3;
     constexpr uint16_t GYRO_SAMPLING_RATE = DLPF_VALUE > 0 ? 1000 : 8000;
+    constexpr uint16_t ACCELEROMETER_SAMPLING_RATE = 1000;
+    constexpr uint8_t CLOCK_PRESCALER = (GYRO_SAMPLING_RATE / ACCELEROMETER_SAMPLING_RATE) -1;
 
     constexpr float ACCELEROMETER_BIAS[3] = { 1.926794f, -10.027902f, 3.518213f };
     constexpr float ACCELEROMETER_MATRIX[3][3] = {
@@ -179,8 +180,9 @@ Status Mpu6050::Start()
     if (ret != Status::Ok)
         return ret;
 
-    // Since config is 0 then gyro rate is 8kHz
-    // So we set prescaler to 8 to get 1kHz sampling rate
+    // If DLPF config is 0 then gyro rate is 8kHz
+    // Else it is set to 1kHz
+    // We want a prescaler to get 1kHz sampling rate
     // Which matches accelerometer sampling rate
     ret = WriteByte(MPU6050_SMPRT_DIV, CLOCK_PRESCALER);
     if (ret != Status::Ok)
