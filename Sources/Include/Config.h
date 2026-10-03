@@ -11,6 +11,8 @@ namespace Config
     constexpr float BATTERY_ADC_MAX_VOLTAGE = 2.965f;
     constexpr uint32_t BATTERY_SAMPLING_RATE_HZ = 20;
 
+    constexpr uint16_t MPU_RESET_TIMEOUT = 100;
+
     constexpr uint16_t SW_UART_QUEUE_SIZE = 256;
     constexpr uint16_t CRSF_READER_BUFFER_SIZE = 256;
     constexpr uint16_t SENSOR_FUSION_NODE_QUEUE_SIZE = 16;

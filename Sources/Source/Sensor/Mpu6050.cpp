@@ -1,10 +1,14 @@
 #include "Mpu6050.h"
 #include "stm32f4xx_hal.h"
 #include <cmath>
+#include "Config.h"
+#include "SensorStatus.h"
+#include "projdefs.h"
 
 namespace
 {
     constexpr uint16_t MPU6050_ADDRESS = 0x68;
+    constexpr uint16_t MPU6050_WHO_AM_I_VALUE = 0x68;
 
     constexpr uint16_t MPU6050_SMPRT_DIV = 0X19;
     constexpr uint16_t MPU6050_WHO_AM_I = 0X75;
@@ -141,7 +145,7 @@ Status Mpu6050::Start()
     auto ret = ReadByte(MPU6050_WHO_AM_I, whoAmI);
     if (ret != Status::Ok)
         return ret;
-    if (whoAmI != MPU6050_ADDRESS)
+    if (whoAmI != MPU6050_WHO_AM_I_VALUE)
         return Status::Error;
 
     PowerManagementRegister powerManagement{};
@@ -149,21 +153,31 @@ Status Mpu6050::Start()
     ret = WriteByte(MPU6050_PWR_MGMT_1, powerManagement.value);
     if (ret != Status::Ok)
         return ret;
-    HAL_Delay(100);
+    auto start = xTaskGetTickCount();
+    while(true)
+    {
+        ret = ReadByte(MPU6050_PWR_MGMT_1, powerManagement.value);
+        auto now = xTaskGetTickCount();
+        if ((now - start) > pdMS_TO_TICKS(Config::MPU_RESET_TIMEOUT))
+            return Status::Timeout;
+        if (powerManagement.bits.deviceReset == 0 && ret == Status::Ok)
+            break;
+        vTaskDelay(1);
+    }
 
-    powerManagement.bits.deviceReset = 0;
+    powerManagement = {};
     powerManagement.bits.tempDisable = 1;
+    powerManagement.bits.clockSelect = 1;
     ret = WriteByte(MPU6050_PWR_MGMT_1, powerManagement.value);
     if (ret != Status::Ok)
         return ret;
-    HAL_Delay(50);
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     ConfigRegister config{};
     config.bits.dlpfConfig = DLPF_VALUE;
     ret = WriteByte(MPU6050_CONFIG, config.value);
     if (ret != Status::Ok)
         return ret;
-    HAL_Delay(50);
 
     // Since config is 0 then gyro rate is 8kHz
     // So we set prescaler to 8 to get 1kHz sampling rate
@@ -171,7 +185,6 @@ Status Mpu6050::Start()
     ret = WriteByte(MPU6050_SMPRT_DIV, CLOCK_PRESCALER);
     if (ret != Status::Ok)
         return ret;
-    HAL_Delay(50);
 
     GyroAccelConfigRegister gyroConfig{};
     gyroConfig.bits.fullScaleSelect = 0b01;
@@ -179,7 +192,6 @@ Status Mpu6050::Start()
     if (ret != Status::Ok)
         return ret;
     m_gyroResolution = GetGyroResolution(gyroConfig.bits.fullScaleSelect);
-    HAL_Delay(50);
 
     GyroAccelConfigRegister accelConfig{};
     accelConfig.bits.fullScaleSelect = 0b11;
@@ -187,7 +199,6 @@ Status Mpu6050::Start()
     if (ret != Status::Ok)
         return ret;
     m_accelerometerResolution = GetAccelerometerResolution(accelConfig.bits.fullScaleSelect);
-    HAL_Delay(50);
     return ret;
 }
 
