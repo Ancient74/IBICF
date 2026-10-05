@@ -2,6 +2,7 @@
 #include "AdcSensor.h"
 #include "TaskThread.h"
 #include "Config.h"
+#include "Log.h"
 #include "PubSubLib/Node.hpp"
 #include <algorithm>
 #include <array>
@@ -59,7 +60,17 @@ public:
             std::span<uint16_t>(m_buffer.data(), m_oversampleCount));
 
         if (status != Status::Ok)
+        {
+            if (!m_readingFailed || status != m_lastStatus)
+                LogWarning(m_thread.GetName(), "ADC conversion failed (status=%d)", static_cast<int>(status));
+            m_readingFailed = true;
+            m_lastStatus = status;
             return;
+        }
+        if (m_readingFailed)
+            LogInfo(m_thread.GetName(), "ADC conversions recovered");
+        m_readingFailed = false;
+        m_lastStatus = Status::Ok;
 
         uint32_t sum = 0;
         for (uint32_t i = 0; i < m_oversampleCount; ++i)
@@ -87,6 +98,8 @@ public:
 private:
     TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, Config::Task::BATTERY_SENSOR_NODE_STACK_SIZE, Config::Task::BATTERY_SENSOR_NODE_PRIORITY> m_thread;
     AdcSensor& m_adcSensor;
+    Status m_lastStatus{Status::Ok};
+    bool m_readingFailed{false};
     std::array<uint16_t, Config::BATTERY_ADC_OVERSAMPLING_RATIO> m_buffer{};
     uint32_t m_oversampleCount = 0;
     uint32_t m_extraBits = 0;
