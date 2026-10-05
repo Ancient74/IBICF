@@ -175,7 +175,6 @@ extern "C" void main_cpp()
     Connect(crsfFrameReader, crsfFrameParser);
     Connect(crsfFrameParser, crsfFrameProcessor);
     Connect(crsfFrameProcessor.GetDeviceInfoNode(), crsfDeviceInfo);
-    crsfFrameReader.Start();
 
     static VtxControllerNode vtxControllerNode{trampProtocolController};
     static PlaneControllerNode planeControllerNode{model,
@@ -187,6 +186,8 @@ extern "C" void main_cpp()
     Connect(crsfFrameProcessor.GetRcPacketNode(), planeControllerNode);
     Connect(crsfFrameProcessor.GetLinkInfoNode(), osdRcLinkNode);
     Connect(planeControllerNode, osdFlightModeNode);
+
+    crsfFrameReader.Start();
 
     osdCompositorTask.StartCompositor();
 
