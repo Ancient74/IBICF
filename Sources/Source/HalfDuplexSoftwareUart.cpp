@@ -37,7 +37,6 @@ HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port,
     configASSERT(m_writeQueue != nullptr);
     m_readingSemaphore = xSemaphoreCreateBinaryStatic(&m_readingSemaphoreBuffer);
     HAL_TIM_Base_Start(&m_timer);
-    Start();
 }
 
 HalfDuplexSoftwareUart::~HalfDuplexSoftwareUart()

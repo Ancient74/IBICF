@@ -156,6 +156,10 @@ extern "C" void main_cpp()
     static TrampProtocolController trampProtocolController{"TrampProtocol"};
     Connect(swUart, trampParser);
     Connect(trampProtocolController, swUart);
+    trampParser.Start();
+    trampProtocolController.Start();
+    swUart.Start();
+
     static OsdVtxInfo osdVtxNode{osdController, trampProtocolController};
     osdCompositorTask.Register(osdVtxNode);
 

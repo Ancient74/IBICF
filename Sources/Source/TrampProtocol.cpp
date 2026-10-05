@@ -29,7 +29,6 @@ TrampFrameParser::TrampFrameParser(const char* taskName)
 {
     m_inputQueue = xQueueCreateStatic(sizeof(m_inputQueueStorage), sizeof(uint8_t), m_inputQueueStorage, &m_inputQueueBuffer);
     configASSERT(m_inputQueue != nullptr);
-    Start();
 }
 
 TrampFrameParser::~TrampFrameParser()
@@ -112,7 +111,6 @@ TrampProtocolController::TrampProtocolController(const char* taskName)
 {
     m_desiredStateMutex = xSemaphoreCreateMutexStatic(&m_desiredStateBuffer);
     m_dataMutex = xSemaphoreCreateMutexStatic(&m_dataBuffer);
-    Start();
 }
 
 TrampProtocolController::~TrampProtocolController()
