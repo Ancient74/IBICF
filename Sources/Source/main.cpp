@@ -84,8 +84,16 @@ extern "C" void main_cpp()
     Matrix3f N{};
     auto samplingRate = mpuSensor.GetSamplingRate();
 
-    mpuSensor.Calibrate(accelR, N);
-    LogInfo(MODULE, "IMU calibration complete; sampling rate=%u Hz", static_cast<unsigned>(samplingRate));
+    if (mpuStatus == Status::Ok)
+    {
+        LogInfo(MODULE, "IMU calibration in progress");
+        mpuSensor.Calibrate(accelR, N);
+        LogInfo(MODULE, "IMU calibration complete; sampling rate=%u Hz", static_cast<unsigned>(samplingRate));
+    }
+    else
+    {
+        LogInfo(MODULE, "IMU calibration skipped due to previous errors");
+    }
     static SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
 
     static Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
