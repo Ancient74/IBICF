@@ -7,7 +7,7 @@
 #include "PubSubLib/Node.hpp"
 
 class FailsafeFlightMode
-    : public IFlightMode
+    : public FlightModeBase
     , public NodeInput<FailsafeFlightMode, Quaternion<float>>
 {
 public:
@@ -16,15 +16,16 @@ public:
     void Start() { m_thread.Start(); }
     void Stop() { m_thread.Stop(); }
 
-    void OnEnter() override;
-    void OnExit() override;
-
     void Process(const Quaternion<float>& quat);
 
     PitchRollYawThrust Translate(const PitchRollYawThrust& pitchRollYaw) override;
     void RunTaskIteration();
 
     const char* GetName() const override;
+
+protected:
+    void OnEnterInternal() override;
+    void OnExitInternal() override;
 
 private:
     TaskThread<FailsafeFlightMode, Config::Task::FAILSAFE_FLIGHT_MODE_STACK_SIZE, Config::Task::FAILSAFE_FLIGHT_MODE_PRIORITY> m_thread;

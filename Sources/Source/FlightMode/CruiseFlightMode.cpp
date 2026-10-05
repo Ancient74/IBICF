@@ -22,7 +22,7 @@ CruiseFlightMode::CruiseFlightMode(const char* taskName)
 {
 }
 
-void CruiseFlightMode::OnEnter()
+void CruiseFlightMode::OnEnterInternal()
 {
     m_desiredAlt = m_currentAlt;
     m_altPid.Reset();
@@ -30,7 +30,7 @@ void CruiseFlightMode::OnEnter()
     Start();
 }
 
-void CruiseFlightMode::OnExit()
+void CruiseFlightMode::OnExitInternal()
 {
     Stop();
 }

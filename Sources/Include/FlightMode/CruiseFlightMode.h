@@ -7,7 +7,7 @@
 #include "Config.h"
 
 class CruiseFlightMode
-    : public IFlightMode
+    : public FlightModeBase
     , public NodeInput<CruiseFlightMode, Quaternion<float>>
     , public NodeInput<CruiseFlightMode, float>
 {
@@ -17,9 +17,6 @@ public:
     void Start() { m_thread.Start(); }
     void Stop() { m_thread.Stop(); }
 
-    void OnEnter() override;
-    void OnExit() override;
-
     PitchRollYawThrust Translate(const PitchRollYawThrust& pitchRollYaw) override;
 
     const char* GetName() const override;
@@ -28,6 +25,10 @@ public:
     void Process(float altitude);
 
     void RunTaskIteration();
+
+protected:
+    void OnEnterInternal() override;
+    void OnExitInternal() override;
 
 private:
     TaskThread<CruiseFlightMode, Config::Task::CRUISE_FLIGHT_MODE_STACK_SIZE, Config::Task::CRUISE_FLIGHT_MODE_PRIORITY> m_thread;

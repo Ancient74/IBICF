@@ -19,11 +19,20 @@ public:
     virtual const char* GetName() const = 0;
 };
 
-class ManualFlightMode : public IFlightMode
+class FlightModeBase : public IFlightMode
+{
+public:
+    void OnEnter() final override;
+    void OnExit() final override;
+
+protected:
+    virtual void OnEnterInternal();
+    virtual void OnExitInternal();
+};
+
+class ManualFlightMode : public FlightModeBase
 {
 public:
     PitchRollYawThrust Translate(const PitchRollYawThrust& command) override;
-    void OnEnter() override {};
-    void OnExit() override {};
     const char* GetName() const override;
 };

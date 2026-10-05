@@ -25,14 +25,14 @@ PitchRollYawThrust FailsafeFlightMode::Translate(const PitchRollYawThrust& pitch
     return out;
 }
 
-void FailsafeFlightMode::OnEnter()
+void FailsafeFlightMode::OnEnterInternal()
 {
     m_rollPid.Reset();
     m_failsafeEnteredTick = xTaskGetTickCount();
     Start();
 }
 
-void FailsafeFlightMode::OnExit()
+void FailsafeFlightMode::OnExitInternal()
 {
     Stop();
 }
