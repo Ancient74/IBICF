@@ -72,7 +72,11 @@ extern "C" void main_cpp()
 
     static I2cBus bus{hi2c2};
     static Mpu6050 mpuSensor{hi2c2, bus.Mutex()};
-    mpuSensor.Start();
+    const auto mpuStatus = mpuSensor.Start();
+    if (mpuStatus != Status::Ok)
+        LogError(MODULE, "MPU6050 initialization failed (status=%d)", static_cast<int>(mpuStatus));
+    else
+        LogInfo(MODULE, "MPU6050 initialized");
 
     Matrix3f accelR{};
     Matrix3f magnetR{};
@@ -80,18 +84,31 @@ extern "C" void main_cpp()
     auto samplingRate = mpuSensor.GetSamplingRate();
 
     mpuSensor.Calibrate(accelR, N);
+    LogInfo(MODULE, "IMU calibration complete; sampling rate=%u Hz", static_cast<unsigned>(samplingRate));
     static SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
 
     static Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
     static SensorSamplingNode<Qmc5883L, Magnetometer, 1> qmcNode{qmcSensor, "QMC"};
+    bool useQmc = false;
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
     {
-        qmcSensor.Start();
-        qmcSensor.GetSensorVariance(magnetR);
+        const auto qmcStatus = qmcSensor.Start();
+        if (qmcStatus == Status::Ok)
+        {
+            qmcSensor.GetSensorVariance(magnetR);
+            useQmc = true;
+            LogInfo(MODULE, "QMC5883L initialized; calibration sampling complete");
+        }
+        else
+        {
+            LogWarning(MODULE, "QMC5883L initialization failed (status=%d)", static_cast<int>(qmcStatus));
+        }
     }
+    else
+        LogInfo(MODULE, "Magnetometer correction is disabled");
     static SensorFusionNode<2> fusion{"Fusion", 1.0f / samplingRate, accelR, magnetR, N};
 
-    if (Config::ENABLE_MAGNETOMETER_CORRECTION)
+    if (useQmc)
     {
         Connect(qmcNode, fusion.MagInput());
         qmcNode.Start();
@@ -106,14 +123,18 @@ extern "C" void main_cpp()
     static EmaFilterNode<BME280::Measurements, 1> bmeFilterNode{0.1f, 5};
     static PressureToAltitudeConverterNode<2> altitudeNode;
     bool useBme = false;
-    if(bmeSensor.Start() == Status::Ok)
+    const auto bmeStatus = bmeSensor.Start();
+    if (bmeStatus == Status::Ok)
     {
         useBme = true;
         BME280::Measurements baseMeasurements{};
         bmeSensor.Calibrate(baseMeasurements);
         altitudeNode.SetBaseMeasurements(baseMeasurements.pressure, baseMeasurements.temperature);
         bmeNode.Start();
+        LogInfo(MODULE, "BME280 initialized; altitude input enabled");
     }
+    else
+        LogWarning(MODULE, "BME280 unavailable (status=%d); altitude input disabled", static_cast<int>(bmeStatus));
 
     static AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
     static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
@@ -159,12 +180,15 @@ extern "C" void main_cpp()
     trampParser.Start();
     trampProtocolController.Start();
     swUart.Start();
+    LogInfo(MODULE, "VTX communication started");
 
     static OsdVtxInfo osdVtxNode{osdController, trampProtocolController};
     osdCompositorTask.Register(osdVtxNode);
 
     fusion.Start();
+    LogInfo(MODULE, "Sensor fusion started");
     batterySensor.Start();
+    LogInfo(MODULE, "Battery sensor started");
 
     static CrsfFrameReaderNode crsfFrameReader{"CrsfReader"};
     static CrsfLib::FrameParserNode crsfFrameParser{};
@@ -188,8 +212,10 @@ extern "C" void main_cpp()
     Connect(planeControllerNode, osdFlightModeNode);
 
     crsfFrameReader.Start();
+    LogInfo(MODULE, "CRSF receiver started");
 
     osdCompositorTask.StartCompositor();
+    LogInfo(MODULE, "OSD started");
 
     vTaskDelete(nullptr);
 }
