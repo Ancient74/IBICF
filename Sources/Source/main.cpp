@@ -5,6 +5,7 @@
 #include "FailsafeFlightMode.h"
 #include "HalfDuplexSoftwareUart.h"
 #include "Log.h"
+#include "Logger.h"
 #include "cmsis_os.h"
 #include "CrsfUartWriteNodes.h"
 #include "CruiseFlightMode.h"

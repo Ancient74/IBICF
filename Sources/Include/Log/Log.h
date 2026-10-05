@@ -1,10 +1,30 @@
 #pragma once
-#include "Logger.h"
-#include "stm32f4xx_hal.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <utility>
+
+extern "C" uint32_t HAL_GetTick(void);
+
+enum class Severity : uint8_t
+{
+    Info,
+    Warning,
+    Error
+};
+
+#pragma pack(push, 1)
+struct LogMessage
+{
+    uint32_t timeStamp;
+    Severity severity;
+    std::array<char, 32> module;
+    std::array<char, 128> message;
+    std::array<char, 32> fileName;
+    uint16_t line;
+};
+#pragma pack(pop)
 
 #ifdef DEBUG
 
@@ -20,6 +40,8 @@ constexpr void CopyString(std::array<char, N>& dst, const char* src)
     dst[i] = '\0';
 }
 
+bool SubmitLog(const LogMessage& message);
+
 template <typename... Args>
 inline bool Log(const char* module
               , const char* fileName
@@ -32,7 +54,7 @@ inline bool Log(const char* module
     CopyString(message.fileName, fileName);
     message.line = line;
     std::snprintf(message.message.data(), message.message.size(), format, std::forward<Args>(args)...);
-    return Logger::GetInstance()->Log(message);
+    return SubmitLog(message);
 }
 
 #define LogError(module, fmt, ...) Log(module, __FILE_NAME__, __LINE__, Severity::Error, fmt __VA_OPT__(,) __VA_ARGS__)

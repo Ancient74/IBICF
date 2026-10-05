@@ -4,6 +4,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
+#include "Log.h"
 
 template<typename Logic, uint16_t StackDepth, UBaseType_t Priority, bool Periodic = true>
 class TaskThread
@@ -43,6 +44,8 @@ public:
         m_task = xTaskCreateStatic(&TaskThread::TaskLoop, m_taskName, StackDepth,
                                     this, Priority, m_stack, &m_taskTCB);
         configASSERT(m_task != nullptr);
+
+        LogInfo(m_taskName, "module started");
     }
 
     void Stop()
@@ -56,6 +59,7 @@ public:
         vSemaphoreDelete(m_doneSem);
         m_doneSem = nullptr;
         m_task = nullptr;
+        LogInfo(m_taskName, "module stopped");
     }
 
 private:

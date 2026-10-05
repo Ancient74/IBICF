@@ -1,27 +1,10 @@
 #pragma once
 #include <cstdint>
 #include "stm32f4xx_hal.h"
-#include <array>
+#include "Log.h"
 #include "Config.h"
 #include "TaskThread.h"
 #include <optional>
-
-enum class Severity
-{
-    Info,
-    Warning,
-    Error
-};
-
-struct LogMessage
-{
-    uint32_t timeStamp;
-    Severity severity;
-    std::array<char, 32> module;
-    std::array<char, 128> message;
-    std::array<char, 32> fileName;
-    uint16_t line;
-};
 
 class Logger
 {

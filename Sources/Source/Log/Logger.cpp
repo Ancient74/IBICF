@@ -13,6 +13,13 @@ extern "C" void LoggerTransmitCompleteFromISR()
 
 extern volatile uint8_t CdcDtr;
 
+#ifdef DEBUG
+bool SubmitLog(const LogMessage& message)
+{
+    return Logger::GetInstance()->Log(message);
+}
+#endif
+
 namespace
 {
     void WaitForUsb()
