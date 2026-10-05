@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "FailsafeFlightMode.h"
 #include "HalfDuplexSoftwareUart.h"
+#include "Log.h"
 #include "cmsis_os.h"
 #include "CrsfUartWriteNodes.h"
 #include "CruiseFlightMode.h"
@@ -41,8 +42,15 @@ extern I2C_HandleTypeDef hi2c2;
 
 using namespace std::chrono_literals;
 
+namespace
+{
+    constexpr const char* MODULE = "Main";
+}
+
 extern "C" void main_cpp()
 {
+    static Logger logger{"Logger"};
+    LogInfo(MODULE, "System start");
     static ServoPwmControl leftAileronControl{htim4, TIM_CHANNEL_1, 500us, 2500us};
     static ServoPwmControl rightAileronControl{htim4, TIM_CHANNEL_2, 500us, 2500us};
     static ServoPwmControl leftRuddervatorControl{htim4, TIM_CHANNEL_3, 500us, 2500us};

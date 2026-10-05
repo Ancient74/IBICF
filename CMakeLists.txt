@@ -68,6 +68,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Sources/Include/Crsf
     Sources/Include/Osd
     Sources/Include/FlightMode
+    Sources/Include/Log
 )
 
 # Add project symbols (macros)

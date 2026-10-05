@@ -128,6 +128,7 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
+extern void LoggerTransmitCompleteFromISR(void);
 
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
@@ -311,6 +312,7 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
   UNUSED(Buf);
   UNUSED(Len);
   UNUSED(epnum);
+  LoggerTransmitCompleteFromISR();
   /* USER CODE END 13 */
   return result;
 }

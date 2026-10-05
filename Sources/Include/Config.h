@@ -62,6 +62,11 @@ namespace Config
     constexpr uint32_t RC_LINK_TIMEOUT_MS = 400;
     constexpr uint32_t FAILSAFE_OUTPUT_PUSH_PERIOD_MS = 20;
 
+    constexpr uint16_t LOGGER_QUEUE_SIZE = 10;
+    constexpr uint16_t LOGGER_QUEUE_TIMEOUT_MS = 200;
+    constexpr uint16_t LOGGER_BUSY_RETRY_INTERVAL_MS = 10;
+    constexpr uint16_t LOGGER_BUSY_RETRY_ATTEMPTS = 10;
+
     namespace Task
     {
         constexpr uint16_t HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE = configMINIMAL_STACK_SIZE;
@@ -93,5 +98,8 @@ namespace Config
 
         constexpr uint16_t SENSOR_SAMPLING_NODE_STACK_SIZE = configMINIMAL_STACK_SIZE;
         constexpr UBaseType_t SENSOR_SAMPLING_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 4;
+
+        constexpr uint16_t LOGGER_STACK_SIZE = 2048;
+        constexpr UBaseType_t LOGGER_PRIORITY = configMAX_PRIORITIES / 2 + 5;
     }
 }
