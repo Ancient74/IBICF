@@ -109,7 +109,7 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+volatile uint8_t CdcDtr = 0;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -229,7 +229,10 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
     break;
 
     case CDC_SET_CONTROL_LINE_STATE:
-
+    {
+      USBD_SetupReqTypedef *req = (USBD_SetupReqTypedef *)pbuf;
+      CdcDtr = req->wValue & 0x01;
+    }
     break;
 
     case CDC_SEND_BREAK:

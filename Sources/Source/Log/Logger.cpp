@@ -11,12 +11,26 @@ extern "C" void LoggerTransmitCompleteFromISR()
         logger->TransmitCompleteFromISR();
 }
 
+extern volatile uint8_t CdcDtr;
+
+namespace
+{
+    void WaitForUsb()
+    {
+        while (!CdcDtr)
+            HAL_Delay(10);
+    }
+}
+
 Logger::Logger(const char* taskName)
     : m_thread(taskName, 0, *this)
 {
     if (s_instance)
         return;
     s_instance = this;
+
+    WaitForUsb();
+
     m_queue = xQueueCreateStatic(Config::LOGGER_QUEUE_SIZE, sizeof(LogMessage), m_queueStorage, &m_queueBuffer);
     configASSERT(m_queue != nullptr);
     m_txCompleteSemaphore = xSemaphoreCreateBinaryStatic(&m_txCompleteSemaphoreBuffer);
