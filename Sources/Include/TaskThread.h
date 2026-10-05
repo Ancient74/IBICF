@@ -23,6 +23,8 @@ public:
     TaskThread(TaskThread&&) = delete;
     TaskThread& operator=(TaskThread&&) = delete;
 
+    const char* GetName() const { return m_taskName; }
+
     void Start()
     {
         static_assert(requires(Logic& l) {
