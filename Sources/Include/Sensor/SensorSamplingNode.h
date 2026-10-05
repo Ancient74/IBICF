@@ -5,6 +5,7 @@
 #include "SensorConcepts.h"
 #include "TaskThread.h"
 #include "Config.h"
+#include "Log.h"
 #include <PubSubLib/Node.hpp>
 
 template<typename SensorT, typename SensorOutputT, uint8_t MaxSubs>
@@ -30,13 +31,23 @@ public:
     void RunTaskIteration()
     {
         SensorOutputT raw{};
-        if (m_sensor.GetRawValues(raw) == Status::Ok)
+        const Status status = m_sensor.GetRawValues(raw);
+        if (status == Status::Ok)
         {
+            if (m_lastStatus != Status::Ok)
+                LogInfo(m_thread.GetName(), "Sensor reads recovered");
+            m_lastStatus = Status::Ok;
             m_sensor.Normalize(raw);
             this->Publish(raw);
+        }
+        else if (status != m_lastStatus)
+        {
+            LogWarning(m_thread.GetName(), "Sensor read failed (status=%d)", static_cast<int>(status));
+            m_lastStatus = status;
         }
     }
 
     TaskThread<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, Config::Task::SENSOR_SAMPLING_NODE_STACK_SIZE, Config::Task::SENSOR_SAMPLING_NODE_PRIORITY> m_thread;
     SensorT& m_sensor;
+    Status m_lastStatus{Status::Ok};
 };
