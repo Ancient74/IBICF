@@ -96,7 +96,7 @@ namespace Config
         constexpr uint16_t SENSOR_FUSION_NODE_STACK_SIZE = configMINIMAL_STACK_SIZE;
         constexpr UBaseType_t SENSOR_FUSION_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 4;
 
-        constexpr uint16_t SENSOR_SAMPLING_NODE_STACK_SIZE = configMINIMAL_STACK_SIZE;
+        constexpr uint16_t SENSOR_SAMPLING_NODE_STACK_SIZE = 256;
         constexpr UBaseType_t SENSOR_SAMPLING_NODE_PRIORITY = configMAX_PRIORITIES / 2 - 4;
 
         constexpr uint16_t LOGGER_STACK_SIZE = 2048;
