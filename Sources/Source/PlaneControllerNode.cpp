@@ -3,6 +3,7 @@
 #include <cstring>
 #include <span>
 #include "Config.h"
+#include "Log.h"
 
 namespace
 {
@@ -10,6 +11,8 @@ namespace
     {
         return { .pitch = packet.pitch, .roll = packet.roll, .yaw = packet.yaw, .thrust = packet.thrust };
     }
+
+    constexpr const char* MODULE = "PlaneController";
 }
 
 PlaneControllerNode::PlaneControllerNode(PlaneModel& model
@@ -84,7 +87,9 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     {
         xTimerStop(m_outputPushTimer, 0);
     }
-    m_isArmed.store(packet.isArmed);
+    bool isArmed = m_isArmed.exchange(packet.isArmed);
+    if (isArmed != packet.isArmed)
+        LogInfo(MODULE, "Motor is %s", packet.isArmed ? "armed" : "disarmed");
     bool flightModeChanged = false;
     auto* currentFlightMode = m_currentFlightMode.load();
     switch (packet.flightMode)
