@@ -1,5 +1,6 @@
 #include "TrampProtocol.h"
 #include "Config.h"
+#include "Log.h"
 #include <span>
 #include <cstring>
 
@@ -21,6 +22,22 @@ namespace
         T value;
         std::memcpy(&value, payload.data(), sizeof(T));
         return value;
+    }
+
+    constexpr const char* MODULE = "TRAMP";
+
+    constexpr const char* TrampCommandName(TrampCommand command)
+    {
+        switch (command)
+        {
+        case TrampCommand::Capabilities: return "Capabilities";
+        case TrampCommand::Status: return "Status";
+        case TrampCommand::Temperature: return "Temperature";
+        case TrampCommand::SetFrequency: return "SetFrequency";
+        case TrampCommand::SetPower: return "SetPower";
+        case TrampCommand::SetPitMode: return "SetPitMode";
+        default: return "Unknown";
+        }
     }
 }
 
@@ -140,30 +157,69 @@ void TrampProtocolController::InvalidateStatus()
 void TrampProtocolController::Process(const TrampFrame& frame)
 {
     if (frame.checksum != TrampChecksum(frame))
-        return; // corrupt frame
+    {
+        LogWarning(MODULE, "Discarded RX %s command (0x%02X): checksum mismatch, received=0x%02X expected=0x%02X",
+            TrampCommandName(static_cast<TrampCommand>(frame.command)),
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(frame.checksum),
+            static_cast<unsigned>(TrampChecksum(frame)));
+        return;
+    }
 
     MarkResponseReceived();
 
-    xSemaphoreTake(m_dataMutex, portMAX_DELAY);
     switch (static_cast<TrampCommand>(frame.command))
     {
     case TrampCommand::Capabilities:
-        m_capabilities = ExtractPayload<TrampCapabilities>(frame.response);
+    {
+        const auto capabilities = ExtractPayload<TrampCapabilities>(frame.response);
+        LogInfo(MODULE, "RX Capabilities (0x%02X): frequency=%u-%u MHz, max power=%u mW",
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(capabilities.minFreqMHz),
+            static_cast<unsigned>(capabilities.maxFreqMHz),
+            static_cast<unsigned>(capabilities.maxPowerMw));
+        xSemaphoreTake(m_dataMutex, portMAX_DELAY);
+        m_capabilities = capabilities;
         if (m_connectionState.load() == TrampConnectionState::Offline)
             m_connectionState.store(TrampConnectionState::Handshaking);
-        break;
-    case TrampCommand::Status:
-        m_status = ExtractPayload<TrampStatus>(frame.response);
-        if (m_connectionState.load() == TrampConnectionState::Handshaking)
-            m_connectionState.store(TrampConnectionState::Online);
-        break;
-    case TrampCommand::Temperature:
-        m_temperature = ExtractPayload<TrampTemperature>(frame.response);
-        break;
-    default:
+        xSemaphoreGive(m_dataMutex);
         break;
     }
-    xSemaphoreGive(m_dataMutex);
+    case TrampCommand::Status:
+    {
+        const auto status = ExtractPayload<TrampStatus>(frame.response);
+        LogInfo(MODULE, "RX Status (0x%02X): frequency=%u MHz, configured power=%u mW, actual power=%u mW, pit mode=%s, race lock=%s",
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(status.freqMHz),
+            static_cast<unsigned>(status.configuredPowerMw),
+            static_cast<unsigned>(status.actualPowerMw),
+            status.pitMode != 0 ? "on" : "off",
+            status.IsRaceLocked() ? "on" : "off");
+        xSemaphoreTake(m_dataMutex, portMAX_DELAY);
+        m_status = status;
+        if (m_connectionState.load() == TrampConnectionState::Handshaking)
+            m_connectionState.store(TrampConnectionState::Online);
+        xSemaphoreGive(m_dataMutex);
+        break;
+    }
+    case TrampCommand::Temperature:
+    {
+        const auto temperature = ExtractPayload<TrampTemperature>(frame.response);
+        LogInfo(MODULE, "RX Temperature (0x%02X): %d C",
+            static_cast<unsigned>(frame.command),
+            static_cast<int>(temperature.tempCelsius));
+        xSemaphoreTake(m_dataMutex, portMAX_DELAY);
+        m_temperature = temperature;
+        xSemaphoreGive(m_dataMutex);
+        break;
+    }
+    default:
+        LogWarning(MODULE, "RX unsupported command %s (0x%02X), parameter=%u",
+            TrampCommandName(static_cast<TrampCommand>(frame.command)),
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(frame.parameter.value));
+        break;
+    }
 }
 
 void TrampProtocolController::RunTaskIteration()
@@ -359,6 +415,44 @@ void TrampProtocolController::SendParam(TrampCommand command, uint16_t param)
 
 void TrampProtocolController::SendCommand(const TrampFrame& frame)
 {
+    const auto command = static_cast<TrampCommand>(frame.command);
+    switch (command)
+    {
+    case TrampCommand::Capabilities:
+    case TrampCommand::Status:
+    case TrampCommand::Temperature:
+        LogInfo(MODULE, "TX %s query (0x%02X), checksum=0x%02X",
+            TrampCommandName(command),
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(frame.checksum));
+        break;
+    case TrampCommand::SetFrequency:
+        LogInfo(MODULE, "TX SetFrequency (0x%02X): %u MHz, checksum=0x%02X",
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.checksum));
+        break;
+    case TrampCommand::SetPower:
+        LogInfo(MODULE, "TX SetPower (0x%02X): %u mW, checksum=0x%02X",
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.checksum));
+        break;
+    case TrampCommand::SetPitMode:
+        LogInfo(MODULE, "TX SetPitMode (0x%02X): %s (parameter=%u), checksum=0x%02X",
+            static_cast<unsigned>(frame.command),
+            frame.parameter.value == 0 ? "on" : "off",
+            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.checksum));
+        break;
+    default:
+        LogWarning(MODULE, "TX unknown command (0x%02X), parameter=%u, checksum=0x%02X",
+            static_cast<unsigned>(frame.command),
+            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.checksum));
+        break;
+    }
+
     const auto bytes = std::bit_cast<std::array<uint8_t, sizeof(TrampFrame)>>(frame);
     Publish(bytes);
 }
