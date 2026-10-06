@@ -1,4 +1,11 @@
 #include "I2cSensor.h"
+#include "Log.h"
+#include "stm32f4xx_hal_i2c.h"
+
+namespace
+{
+    constexpr const char* MODULE = "I2C";
+}
 
 I2cBusLock::I2cBusLock(SemaphoreHandle_t m)
     : m_mutex(m)
@@ -22,6 +29,20 @@ I2cBus::~I2cBus()
 {
     if (m_mutex != nullptr)
         vSemaphoreDelete(m_mutex);
+}
+
+void I2cBus::ScanBus()
+{
+    LogInfo(MODULE, "Scanning i2c bus");
+    for (uint8_t address = 0x08; address <= 0x77; address++)
+    {
+        if (HAL_I2C_IsDeviceReady(&m_i2c
+                                , static_cast<uint16_t>(address << 1)
+                                , 2, 10) == HAL_OK)
+        {
+            LogInfo(MODULE, "Found module at address: 0x%02X", address);
+        }
+    }
 }
 
 I2cSensor::I2cSensor(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex, uint16_t address)

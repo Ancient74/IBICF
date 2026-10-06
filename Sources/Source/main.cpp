@@ -72,6 +72,7 @@ extern "C" void main_cpp()
     };
 
     static I2cBus bus{hi2c2};
+    bus.ScanBus();
     static Mpu6050 mpuSensor{hi2c2, bus.Mutex()};
     const auto mpuStatus = mpuSensor.Start();
     if (mpuStatus != Status::Ok)

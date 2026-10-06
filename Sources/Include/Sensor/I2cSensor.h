@@ -25,6 +25,8 @@ public:
     explicit I2cBus(I2C_HandleTypeDef& i2c);
     ~I2cBus();
 
+    void ScanBus();
+
     SemaphoreHandle_t Mutex() const { return m_mutex; }
 
 private:
