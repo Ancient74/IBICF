@@ -49,7 +49,7 @@ HalfDuplexSoftwareUart::~HalfDuplexSoftwareUart()
 
 void HalfDuplexSoftwareUart::RunTaskIteration()
 {
-    std::array<uint8_t, 16> chunk{};
+    std::array<uint8_t, Config::SW_UART_CHUNK_SIZE> chunk{};
     while (true)
     {
         const auto bytesRead = xStreamBufferReceive(m_writeStream, chunk.data(), chunk.size(), 0);
