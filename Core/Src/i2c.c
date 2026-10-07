@@ -19,9 +19,51 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
+#include "stm32f4xx_hal_gpio.h"
 
 /* USER CODE BEGIN 0 */
+#define RESET_RETRIES 9
+#define SPIN_DELAY 100
 
+void SpinDelay(volatile uint32_t ticks)
+{
+  while (ticks--)
+    __NOP();
+}
+
+void Reset_I2C_Line(void)
+{
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_3, GPIO_PIN_SET);
+
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_3; // SCL | SDA
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL; // Pulled up externally
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  SpinDelay(SPIN_DELAY);
+
+  uint8_t retries = 0;
+  while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3) == GPIO_PIN_RESET && retries < RESET_RETRIES)
+  {
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+    SpinDelay(SPIN_DELAY);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
+    SpinDelay(SPIN_DELAY);
+    retries++;
+  }
+
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+  SpinDelay(SPIN_DELAY);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+  SpinDelay(SPIN_DELAY);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
+  SpinDelay(SPIN_DELAY);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
+  SpinDelay(SPIN_DELAY);
+}
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c2;
@@ -63,7 +105,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
   if(i2cHandle->Instance==I2C2)
   {
   /* USER CODE BEGIN I2C2_MspInit 0 */
-
+    Reset_I2C_Line();
   /* USER CODE END I2C2_MspInit 0 */
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
