@@ -14,10 +14,10 @@ CrsfFrameReaderNode::~CrsfFrameReaderNode()
     Stop();
 }
 
-void CrsfFrameReaderNode::OnByte(uint8_t byte)
+void CrsfFrameReaderNode::OnChunk(std::span<const uint8_t> chunk)
 {
     BaseType_t higherPriorityTaskWoken = pdFALSE;
-    xStreamBufferSendFromISR(m_streamBuffer, &byte, 1, &higherPriorityTaskWoken);
+    xStreamBufferSendFromISR(m_streamBuffer, chunk.data(), chunk.size(), &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 

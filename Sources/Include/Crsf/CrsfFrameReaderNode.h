@@ -16,7 +16,7 @@ class CrsfFrameReaderNode
 public:
     CrsfFrameReaderNode(const char* taskName);
     ~CrsfFrameReaderNode();
-    void OnByte(uint8_t byte) override;
+    void OnChunk(std::span<const uint8_t> chunk) override;
 
     void Start() { m_thread.Start(); }
     void Stop() { m_thread.Stop(); }

@@ -2,12 +2,14 @@
 #include "main.h"
 #include <array>
 #include <span>
+#include <bit>
+#include "Config.h"
 
 class IReader
 {
 public:
     virtual ~IReader() = default;
-    virtual void OnByte(uint8_t byte) = 0;
+    virtual void OnChunk(std::span<const uint8_t> chunk) = 0;
 };
 
 class IWriter
@@ -30,14 +32,16 @@ public:
 
     void Write(std::span<const uint8_t> buffer) override;
 
-    static void DispatchRxComplete(UART_HandleTypeDef* huart);
+    static void DispatchUartEvent(UART_HandleTypeDef* huart);
 private:
     static constexpr size_t kMaxInstances = 4;
     static std::array<Uart*, kMaxInstances> s_instances;
 
-    void onRxComplete();
+    void OnUartEvent();
 
     UART_HandleTypeDef& m_handle;
-    uint8_t m_currentByte;
     IReader& m_reader;
+    uint16_t m_lastPosition = 0;
+    std::array<uint8_t, Config::UART_RX_BUFFER_SIZE> m_buffer{};
+    static_assert(std::has_single_bit(Config::UART_RX_BUFFER_SIZE));
 };

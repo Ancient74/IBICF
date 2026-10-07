@@ -5,7 +5,7 @@
 #include <string_view>
 #include "Config.h"
 #include "FreeRTOS.h"
-#include "queue.h"
+#include "stream_buffer.h"
 #include "Uart.h"
 #include "optional"
 #include <vector>
@@ -213,14 +213,14 @@ public:
     OsdResponseReader();
     ~OsdResponseReader() override;
 
-    void OnByte(uint8_t byte) override;
+    void OnChunk(std::span<const uint8_t> chunk) override;
 
     bool ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs) override;
 
 private:
-    QueueHandle_t m_queue;
-    StaticQueue_t m_queueBuffer{};
-    uint8_t m_queueStorage[Config::OSD_RESPONSE_READER_QUEUE_SIZE];
+    StreamBufferHandle_t m_streamBuffer;
+    StaticStreamBuffer_t m_streamBufferBuffer{};
+    uint8_t m_streamBufferStorage[Config::OSD_RESPONSE_READER_BUFFER_SIZE + 1];
 };
 
 class OsdModule

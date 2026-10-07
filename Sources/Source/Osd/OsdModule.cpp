@@ -5,28 +5,36 @@
 
 OsdResponseReader::OsdResponseReader()
 {
-    m_queue = xQueueCreateStatic(Config::OSD_RESPONSE_READER_QUEUE_SIZE, sizeof(uint8_t), m_queueStorage, &m_queueBuffer);
-    configASSERT(m_queue != nullptr);
+    m_streamBuffer = xStreamBufferCreateStatic(
+        Config::OSD_RESPONSE_READER_BUFFER_SIZE + 1, 1, m_streamBufferStorage, &m_streamBufferBuffer);
+    configASSERT(m_streamBuffer != nullptr);
 }
 
 OsdResponseReader::~OsdResponseReader()
 {
-    vQueueDelete(m_queue);
+    vStreamBufferDelete(m_streamBuffer);
 }
 
-void OsdResponseReader::OnByte(uint8_t byte)
+void OsdResponseReader::OnChunk(std::span<const uint8_t> chunk)
 {
     BaseType_t higherPriorityTaskWoken = pdFALSE;
-    xQueueSendFromISR(m_queue, &byte, &higherPriorityTaskWoken);
+    xStreamBufferSendFromISR(m_streamBuffer, chunk.data(), chunk.size(), &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
 bool OsdResponseReader::ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs)
 {
-    for (auto& byte : buffer)
+    size_t bytesRead = 0;
+    while (bytesRead < buffer.size())
     {
-        if (xQueueReceive(m_queue, &byte, pdMS_TO_TICKS(timeoutMs)) != pdTRUE)
+        const size_t received = xStreamBufferReceive(
+            m_streamBuffer,
+            buffer.data() + bytesRead,
+            buffer.size() - bytesRead,
+            pdMS_TO_TICKS(timeoutMs));
+        if (received == 0)
             return false;
+        bytesRead += received;
     }
     return true;
 }
