@@ -1,6 +1,7 @@
 #include "I2cSensor.h"
 #include "Log.h"
 #include "stm32f4xx_hal_i2c.h"
+#include "Config.h"
 
 namespace
 {
@@ -54,13 +55,13 @@ I2cSensor::I2cSensor(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex, uint16_t a
 Status I2cSensor::WriteBytes(uint16_t registerAddress, std::span<const uint8_t> bytes)
 {
     auto lock = I2cBusLock(m_mutex);
-    return FromHAL(HAL_I2C_Mem_Write(&m_i2c, m_address, registerAddress, I2C_MEMADD_SIZE_8BIT, const_cast<uint8_t*>(bytes.data()), bytes.size(), 100));
+    return FromHAL(HAL_I2C_Mem_Write(&m_i2c, m_address, registerAddress, I2C_MEMADD_SIZE_8BIT, const_cast<uint8_t*>(bytes.data()), bytes.size(), Config::I2C_READ_WRITE_TIMEOUT));
 }
 
 Status I2cSensor::ReadBytes(uint16_t registerAddress, std::span<uint8_t> buffer)
 {
     auto lock = I2cBusLock(m_mutex);
-    return FromHAL(HAL_I2C_Mem_Read(&m_i2c, m_address, registerAddress, I2C_MEMADD_SIZE_8BIT, buffer.data(), buffer.size(), 100));
+    return FromHAL(HAL_I2C_Mem_Read(&m_i2c, m_address, registerAddress, I2C_MEMADD_SIZE_8BIT, buffer.data(), buffer.size(), Config::I2C_READ_WRITE_TIMEOUT));
 }
 
 Status I2cSensor::WriteByte(uint16_t registerAddress, uint8_t byte)
