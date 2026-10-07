@@ -19,6 +19,7 @@ namespace Config
 
     constexpr uint16_t SW_UART_BUFFER_SIZE = 256;
     constexpr uint16_t CRSF_READER_BUFFER_SIZE = 256;
+    constexpr uint16_t CRSF_READER_CHUNK_SIZE = 32;
     constexpr uint16_t SENSOR_FUSION_NODE_QUEUE_SIZE = 16;
     constexpr uint16_t OSD_RESPONSE_READER_BUFFER_SIZE = 64;
     constexpr uint16_t OSD_MODULE_COMMAND_SEQUENCE_SIZE = 64;

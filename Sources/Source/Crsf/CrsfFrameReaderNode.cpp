@@ -23,9 +23,9 @@ void CrsfFrameReaderNode::OnChunk(std::span<const uint8_t> chunk)
 
 void CrsfFrameReaderNode::RunTaskIteration()
 {
-    uint8_t chunk[32];
-    size_t n = xStreamBufferReceive(m_streamBuffer,
-        chunk, sizeof(chunk), pdMS_TO_TICKS(Config::CRSF_READER_TIMEOUT_MS));
-    for (size_t i = 0; i < n; ++i)
+    std::array<uint8_t, Config::CRSF_READER_CHUNK_SIZE> chunk{};
+    const auto bytesRead = xStreamBufferReceive(m_streamBuffer,
+        chunk.data(), chunk.size(), pdMS_TO_TICKS(Config::CRSF_READER_TIMEOUT_MS));
+    for (uint16_t i = 0; i < bytesRead; i++)
         Publish(chunk[i]);
 }
