@@ -3,6 +3,7 @@
 #include "TaskThread.h"
 #include "FreeRTOS.h"
 #include "PubSubLib/Node.hpp"
+#include "stream_buffer.h"
 #include <span>
 #include <stm32f4xx_hal.h>
 #include "Config.h"
@@ -35,9 +36,9 @@ private:
 
     TaskThread<HalfDuplexSoftwareUart, Config::Task::HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE, Config::Task::HALF_DUPLEX_SOFTWARE_UART_PRIORITY> m_thread;
 
-    QueueHandle_t m_writeQueue;
-    StaticQueue_t m_writeQueueBuffer;
-    uint8_t m_writeQueueStorage[Config::SW_UART_QUEUE_SIZE];
+    StreamBufferHandle_t m_writeStream;
+    StaticStreamBuffer_t m_writeStreamBuffer;
+    uint8_t m_writeStreamStorage[Config::SW_UART_BUFFER_SIZE];
 
     SemaphoreHandle_t m_readingSemaphore;
     StaticSemaphore_t m_readingSemaphoreBuffer;

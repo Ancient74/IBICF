@@ -33,8 +33,8 @@ HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port,
 {
     if (!s_instance)
         s_instance = this;
-    m_writeQueue = xQueueCreateStatic(Config::SW_UART_QUEUE_SIZE, sizeof(uint8_t), m_writeQueueStorage, &m_writeQueueBuffer);
-    configASSERT(m_writeQueue != nullptr);
+    m_writeStream = xStreamBufferCreateStatic(Config::SW_UART_BUFFER_SIZE, 1, m_writeStreamStorage, &m_writeStreamBuffer);
+    configASSERT(m_writeStream != nullptr);
     m_readingSemaphore = xSemaphoreCreateBinaryStatic(&m_readingSemaphoreBuffer);
     HAL_TIM_Base_Start(&m_timer);
 }
@@ -42,33 +42,41 @@ HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port,
 HalfDuplexSoftwareUart::~HalfDuplexSoftwareUart()
 {
     Stop();
-    vQueueDelete(m_writeQueue);
+    vStreamBufferDelete(m_writeStream);
     vSemaphoreDelete(m_readingSemaphore);
     s_instance = nullptr;
 }
 
 void HalfDuplexSoftwareUart::RunTaskIteration()
 {
-    uint8_t byte;
-    while (xQueueReceive(m_writeQueue, &byte, 0) == pdTRUE)
+    std::array<uint8_t, 16> chunk{};
+    while (true)
     {
-        HAL_GPIO_WritePin(m_port, m_pin, GPIO_PIN_RESET);
-        DelayPeriod(m_ticksPerBit);
+        const auto bytesRead = xStreamBufferReceive(m_writeStream, chunk.data(), chunk.size(), 0);
+        if (bytesRead == 0)
+            break;
 
-        for (uint8_t i = 0; i < 8; i++)
+        for (uint16_t i = 0; i < bytesRead; i++)
         {
-            HAL_GPIO_WritePin(m_port, m_pin,  (byte & (1u << i)) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            const uint8_t byte = chunk[i];
+            HAL_GPIO_WritePin(m_port, m_pin, GPIO_PIN_RESET);
+            DelayPeriod(m_ticksPerBit);
+
+            for (uint8_t bit = 0; bit < 8; bit++)
+            {
+                HAL_GPIO_WritePin(m_port, m_pin, (byte & (1u << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+                DelayPeriod(m_ticksPerBit);
+            }
+            HAL_GPIO_WritePin(m_port, m_pin, GPIO_PIN_SET);
             DelayPeriod(m_ticksPerBit);
         }
-        HAL_GPIO_WritePin(m_port, m_pin, GPIO_PinState::GPIO_PIN_SET);
-        DelayPeriod(m_ticksPerBit);
     }
     if (xSemaphoreTake(m_readingSemaphore, pdMS_TO_TICKS(Config::SOFTWARE_UART_READ_TIMEOUT_MS)) != pdTRUE)
         return;
 
     while (HAL_GPIO_ReadPin(m_port, m_pin) == GPIO_PIN_RESET)
     {
-        byte = 0;
+        uint8_t byte = 0;
         DelayPeriod(m_ticksPerBit);   // 1.0P -> start of bit 0
         for (uint8_t i = 0; i < 8; i++)
         {
@@ -90,10 +98,7 @@ void HalfDuplexSoftwareUart::RunTaskIteration()
 
 bool HalfDuplexSoftwareUart::Process(std::span<const uint8_t> data)
 {
-    for(uint16_t i = 0; i < data.size(); i++)
-        if (xQueueSend(m_writeQueue, &data[i], 0) != pdTRUE)
-            return false;
-    return true;
+    return xStreamBufferSend(m_writeStream, data.data(), data.size(), 0) != 0;
 }
 
 void HalfDuplexSoftwareUart::DelayPeriod(uint16_t period)
