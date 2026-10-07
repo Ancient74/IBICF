@@ -13,7 +13,8 @@ in a filterable, colour-coded table.
 Record layout (little-endian), matching the C++ struct:
 
     uint32_t              timeStamp   ms since start-up
-    Severity              severity    0 = Info, 1 = Warning, 2 = Error
+    Severity              severity    0 = Info, 1 = Warning, 2 = Error,
+                                      3 = Heartbeat (dashboard only, never shown in the log)
     std::array<char, 32>  module
     std::array<char,128>  message
     std::array<char, 32>  fileName
@@ -38,8 +39,9 @@ import queue
 import struct
 import sys
 import threading
+import time
 import tkinter as tk
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from tkinter import font as tkfont
 from tkinter import ttk
 
@@ -55,7 +57,9 @@ MAX_MESSAGES = 50_000          # oldest messages are discarded beyond this
 SCAN_INTERVAL_S = 0.5          # how often we look for the port while it is absent
 UI_POLL_MS = 30                # how often the GUI drains the receive queue
 MAX_PER_TICK = 5000            # max messages handled per GUI tick
-MAX_RESYNC_GAP_MS = 24 * 3600 * 1000   # max timestamp step between two records when re-syncing
+MAX_RESYNC_GAP_MS = 24 * 3600 * 1000   # max forward timestamp step between records when re-syncing
+MAX_BACKSTEP_MS = 1000                 # tolerated out-of-order timestamp (records from different threads)
+RESYNC_RECORDS = 4                     # consecutive valid records needed to accept a record boundary
 
 # Severity -> (name, text colour).
 # Pure #FFFF00 is unreadable on white, so "yellow" is a dark amber.
@@ -64,6 +68,8 @@ SEVERITIES: dict[int, tuple[str, str]] = {
     1: ("Warning", "#B08000"),
     2: ("Error", "#D00000"),
 }
+HEARTBEAT = 3                      # severity 3: module heartbeat -> dashboard, never in the log
+VALID_SEVERITIES = set(SEVERITIES) | {HEARTBEAT}
 
 BG = "#f4f5f7"
 ROW_EVEN = "#ffffff"
@@ -71,6 +77,22 @@ ROW_ODD = "#f6f7f9"
 SELECT_BG = "#cfe3ff"
 OK_COLOR = "#2e9e4f"
 WAIT_COLOR = "#e0a100"
+
+# Dashboard
+CARD_BG = "#ffffff"
+CARD_BORDER = "#d5d9e0"
+SELECT_BORDER = "#2563eb"
+NEUTRAL_COLOR = "#9ca3af"
+ERROR_COLOR = SEVERITIES[2][1]
+DASH_HEIGHT = 210              # initial height of the dashboard pane (drag the divider to resize)
+CARD_MIN_W = 330               # cards are laid out in as many columns as fit
+DASH_REFRESH_MS = 250
+HB_STALE_FACTOR = 3            # a heartbeat is "silent" after this many missed periods ...
+HB_STALE_MIN_S = 1.5           # ... but never sooner than this many seconds
+# What identifies one heartbeat inside a module:
+#   "location" = the source file:line that emits it (message text may change, e.g. carry a state)
+#   "message"  = the message text (use this if several heartbeats share one logging call site)
+BEAT_KEY = "location"
 
 
 # --------------------------------------------------------------------------- #
@@ -85,6 +107,51 @@ class LogMessage:
     file: str
     line: int
     seq: int = 0  # running number assigned by the GUI
+
+
+def location_of(m: LogMessage) -> str:
+    return f"{m.file}:{m.line}" if m.file else ""
+
+
+@dataclass
+class Beat:
+    """One heartbeat source inside a module."""
+    message: str = ""            # latest heartbeat text (may carry state information)
+    count: int = 0
+    last_device_ms: int = 0
+    last_seen: float = 0.0       # host time.monotonic() of the last beat
+    period_ms: float = 0.0       # smoothed interval between beats (device clock)
+
+    def update(self, message: str, device_ms: int, now: float) -> None:
+        if self.count:
+            step = device_ms - self.last_device_ms
+            if 0 < step < 60_000:            # ignore resets / duplicate timestamps
+                self.period_ms = step if not self.period_ms else 0.8 * self.period_ms + 0.2 * step
+        self.message = message
+        self.count += 1
+        self.last_device_ms = device_ms
+        self.last_seen = now
+
+    def silent_for(self, now: float) -> float | None:
+        """Seconds of silence if the beat is overdue, otherwise None."""
+        age = now - self.last_seen
+        limit = max(HB_STALE_MIN_S, HB_STALE_FACTOR * self.period_ms / 1000)
+        return age if age > limit else None
+
+
+@dataclass
+class ModuleStats:
+    name: str
+    beats: dict = field(default_factory=dict)                 # beat key -> Beat
+    counts: list = field(default_factory=lambda: [0, 0, 0])   # Info / Warning / Error
+    last_problem: LogMessage | None = None                    # last warning or error
+
+    def beat_from(self, m: LogMessage, now: float) -> None:
+        key = location_of(m) if BEAT_KEY == "location" else m.message
+        beat = self.beats.get(key)
+        if beat is None:
+            beat = self.beats[key] = Beat()
+        beat.update(m.message, m.timestamp_ms, now)
 
 
 # Bytes we accept inside a text field (printable ASCII, UTF-8 continuation bytes, \t \r \n)
@@ -127,11 +194,11 @@ class RecordCodec:
         a non-empty message and a NUL-terminated file name.
         """
         ts, sev, module, message, filename, line = self.struct.unpack(raw)
-        if sev not in SEVERITIES:
+        if sev not in VALID_SEVERITIES:
             return None
         if not (_is_text(module) and _is_text(message) and _is_text(filename)):
             return None
-        if strict and not (module[0] != 0 and b"\0" in module and message[0] != 0 and b"\0" in filename):
+        if strict and not (module[0] != 0 and b"\0" in module and (message[0] != 0 or sev == HEARTBEAT) and b"\0" in filename):
             return None
         return LogMessage(
             timestamp_ms=ts,
@@ -212,8 +279,8 @@ class SerialReader(threading.Thread):
 
         A USB CDC stream has no framing, so after connecting (or after a corrupt
         record) we have to find the record boundary ourselves. While "unsynced"
-        we slide forward one byte at a time until two consecutive records both
-        decode cleanly with sensible, non-decreasing timestamps. Once synced,
+        we slide forward one byte at a time until RESYNC_RECORDS consecutive records
+        decode cleanly with advancing timestamps. Once synced,
         records are simply taken every `size` bytes.
         """
         size = self.codec.size
@@ -229,17 +296,32 @@ class SerialReader(threading.Thread):
                     continue
                 self._synced = False          # corrupt record -> look for the boundary again
 
-            if len(buf) < 2 * size:
+            if len(buf) < RESYNC_RECORDS * size:
                 break
-            first = self.codec.parse(bytes(buf[:size]), strict=True)
-            second = self.codec.parse(bytes(buf[size:2 * size]), strict=True) if first else None
-            if first and second and 0 <= second.timestamp_ms - first.timestamp_ms <= MAX_RESYNC_GAP_MS:
+            recs = []
+            for i in range(RESYNC_RECORDS):
+                rec = self.codec.parse(bytes(buf[i * size:(i + 1) * size]), strict=True)
+                if rec is None:
+                    break
+                recs.append(rec)
+            if len(recs) == RESYNC_RECORDS and self._plausible_sequence(recs):
                 self._synced = True
             else:
                 del buf[0]
                 skipped += 1
         if skipped:
             self.queue.put(("skipped", skipped))
+
+    @staticmethod
+    def _plausible_sequence(recs: list[LogMessage]) -> bool:
+        """
+        Timestamps of real, consecutive records advance (allowing tiny out-of-order steps).
+        A wrongly aligned window usually reads constant bytes (e.g. zero padding) as the
+        'timestamp', so requiring overall progress rejects it even when every field looks valid.
+        """
+        ts = [r.timestamp_ms for r in recs]
+        steps = [b - a for a, b in zip(ts, ts[1:])]
+        return all(-MAX_BACKSTEP_MS <= d <= MAX_RESYNC_GAP_MS for d in steps) and ts[-1] > ts[0]
 
     def _on_idle(self, buf: bytearray) -> None:
         """No data for a moment. A buffer holding whole records only means we are aligned."""
@@ -304,6 +386,101 @@ def pick_font(candidates: tuple[str, ...], fallback: str) -> str:
     return fallback
 
 
+class ModuleCard(tk.Frame):
+    """Dashboard tile for one module: heartbeat health, log counters, last problem."""
+
+    WRAP = 290
+
+    def __init__(self, parent, name: str, ui_font: str, on_click):
+        super().__init__(parent, bg=CARD_BORDER, padx=2, pady=2)
+        self.name = name
+        self._ui = ui_font
+        self._on_click = on_click
+        self._beat_labels: dict[str, tk.Label] = {}
+
+        inner = tk.Frame(self, bg=CARD_BG)
+        inner.pack(fill="both", expand=True)
+        self.stripe = tk.Frame(inner, width=6, bg=NEUTRAL_COLOR)
+        self.stripe.pack(side="left", fill="y")
+        body = tk.Frame(inner, bg=CARD_BG, padx=10, pady=8)
+        body.pack(side="left", fill="both", expand=True)
+
+        head = tk.Frame(body, bg=CARD_BG)
+        head.pack(fill="x")
+        tk.Label(head, text=name or "(none)", bg=CARD_BG, font=(ui_font, 11, "bold"), anchor="w").pack(side="left")
+        self.status = tk.Label(head, bg=CARD_BG, font=(ui_font, 9, "bold"))
+        self.status.pack(side="right")
+
+        self.beats_box = tk.Frame(body, bg=CARD_BG)
+        self.beats_box.pack(fill="x", pady=(6, 4))
+
+        counts = tk.Frame(body, bg=CARD_BG)
+        counts.pack(fill="x")
+        self.count_labels = []
+        for _ in SEVERITIES:
+            lbl = tk.Label(counts, bg=CARD_BG, font=(ui_font, 9))
+            lbl.pack(side="left", padx=(0, 12))
+            self.count_labels.append(lbl)
+
+        self.problem = tk.Label(body, bg=CARD_BG, font=(ui_font, 9), anchor="w", justify="left",
+                                wraplength=self.WRAP)
+        self.problem.pack(fill="x", pady=(4, 0))
+        self._bind_click(self)
+
+    def _bind_click(self, widget) -> None:
+        widget.configure(cursor="hand2")
+        widget.bind("<Button-1>", lambda _e: self._on_click(self.name))
+        for child in widget.winfo_children():
+            self._bind_click(child)
+
+    def refresh(self, stats: ModuleStats, now: float, connected: bool, selected: bool) -> None:
+        self.configure(bg=SELECT_BORDER if selected else CARD_BORDER)
+
+        states = []
+        for key, beat in stats.beats.items():
+            lbl = self._beat_labels.get(key)
+            if lbl is None:
+                lbl = tk.Label(self.beats_box, bg=CARD_BG, font=(self._ui, 10), anchor="w",
+                               justify="left", wraplength=self.WRAP)
+                lbl.pack(fill="x")
+                self._bind_click(lbl)
+                self._beat_labels[key] = lbl
+            silent = beat.silent_for(now)
+            if not connected:
+                state, detail, colour = "offline", "offline", NEUTRAL_COLOR
+            elif silent is not None:
+                state, detail, colour = "silent", f"silent {silent:.1f} s", ERROR_COLOR
+            else:
+                state, colour = "alive", OK_COLOR
+                detail = f"{beat.period_ms:.0f} ms" if beat.period_ms else "…"
+            states.append(state)
+            lbl.configure(text=f"●  {beat.message or 'heartbeat'}   ·   {detail}", fg=colour)
+
+        if not states:
+            status, colour = "NO HEARTBEAT", NEUTRAL_COLOR
+        elif "silent" in states:
+            status, colour = "SILENT", ERROR_COLOR
+        elif "offline" in states:
+            status, colour = "OFFLINE", NEUTRAL_COLOR
+        else:
+            status, colour = "ALIVE", OK_COLOR
+        self.status.configure(text=status, fg=colour)
+        self.stripe.configure(bg=colour)
+
+        for sev, lbl in enumerate(self.count_labels):
+            name, sev_colour = SEVERITIES[sev]
+            n = stats.counts[sev]
+            lbl.configure(text=f"{name} {n:,}", fg=sev_colour if n else NEUTRAL_COLOR)
+
+        p = stats.last_problem
+        if p is None:
+            self.problem.configure(text="")
+        else:
+            msg = p.message if len(p.message) <= 80 else p.message[:77] + "…"
+            icon = "✖" if p.severity == 2 else "▲"
+            self.problem.configure(text=f"{icon} {msg}", fg=SEVERITIES[p.severity][1])
+
+
 class LogViewer(tk.Tk):
     COLUMNS = (
         # id, heading, width, anchor, stretch
@@ -325,6 +502,10 @@ class LogViewer(tk.Tk):
         self._shown = 0
         self._skipped = 0
         self._search_job: str | None = None
+        self.stats: dict[str, ModuleStats] = {}
+        self.cards: dict[str, ModuleCard] = {}
+        self._connected = False
+        self._dash_cols = 1
 
         # Snapshot of the active filter (so we don't query Tk variables per message)
         self._f_sev: set[int] = set(SEVERITIES)
@@ -343,6 +524,7 @@ class LogViewer(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.reader.start()
         self.after(UI_POLL_MS, self._poll)
+        self.after(DASH_REFRESH_MS, self._refresh_dashboard)
 
     # ---- construction ---------------------------------------------------- #
     def _build_style(self) -> None:
@@ -442,8 +624,13 @@ class LogViewer(tk.Tk):
         self.search_var.trace_add("write", lambda *_: self._debounce_filter())
 
         # ---- table
-        table = ttk.Frame(body, padding=(0, 6, 12, 0))
-        table.pack(side="left", fill="both", expand=True)
+        right = ttk.Frame(body, padding=(0, 6, 12, 0))
+        right.pack(side="left", fill="both", expand=True)
+        paned = ttk.PanedWindow(right, orient="vertical")
+        paned.pack(fill="both", expand=True)
+        self._build_dashboard(paned)
+        table = ttk.Frame(paned)
+        paned.add(table, weight=1)
         table.rowconfigure(0, weight=1)
         table.columnconfigure(0, weight=1)
 
@@ -566,12 +753,22 @@ class LogViewer(tk.Tk):
         self.mod_list.insert(i, name or "(none)")
         self.mod_list.selection_set(i)      # new modules are visible by default
         self._f_mods.add(name)
+        self._add_card(name)
 
     def _ingest(self, batch: list[LogMessage]) -> None:
+        now = time.monotonic()
         for m in batch:
+            self._register_module(m.module)             # also creates the dashboard card
+            stats = self.stats[m.module]
+            if m.severity == HEARTBEAT:                 # dashboard only: never stored, never logged
+                stats.beat_from(m, now)
+                continue
+
+            stats.counts[m.severity] += 1
+            if m.severity:
+                stats.last_problem = m
             self._seq += 1
             m.seq = self._seq
-            self._register_module(m.module)
             self.messages.append(m)
             if self._passes(m):
                 self._insert(m)
@@ -593,9 +790,79 @@ class LogViewer(tk.Tk):
         self.tree.delete(*self.tree.get_children())
         self._shown = 0
         self._skipped = 0
+        for stats in self.stats.values():           # counters restart; heartbeat state is kept
+            stats.counts = [0, 0, 0]
+            stats.last_problem = None
         self._update_counts()
 
+    # ---- dashboard ------------------------------------------------------- #
+    def _build_dashboard(self, paned: ttk.PanedWindow) -> None:
+        dash = ttk.Frame(paned)
+        paned.add(dash, weight=0)
+
+        head = ttk.Frame(dash)
+        head.pack(fill="x", pady=(0, 4))
+        ttk.Label(head, text="DASHBOARD", style="Section.TLabel").pack(side="left")
+        ttk.Label(head, text="click a module to filter the log", style="Status.TLabel").pack(side="left", padx=10)
+
+        wrap = ttk.Frame(dash)
+        wrap.pack(fill="both", expand=True)
+        self.dash_canvas = tk.Canvas(wrap, height=DASH_HEIGHT, width=600, bg=BG,
+                                     highlightthickness=0, borderwidth=0)
+        vsb = ttk.Scrollbar(wrap, orient="vertical", command=self.dash_canvas.yview)
+        self.dash_canvas.configure(yscrollcommand=vsb.set)
+        self.dash_canvas.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+
+        self.dash_inner = ttk.Frame(self.dash_canvas)
+        self._dash_win = self.dash_canvas.create_window((0, 0), window=self.dash_inner, anchor="nw")
+        self.dash_canvas.bind("<Configure>", self._on_dash_resize)
+        self.dash_inner.bind("<Configure>",
+                             lambda _e: self.dash_canvas.configure(scrollregion=self.dash_canvas.bbox("all")))
+        self._dash_empty = ttk.Label(self.dash_inner, text="Waiting for messages …", style="Status.TLabel")
+        self._dash_empty.grid(row=0, column=0, padx=8, pady=8)
+
+    def _on_dash_resize(self, event) -> None:
+        self.dash_canvas.itemconfigure(self._dash_win, width=event.width)
+        self._reflow()
+
+    def _add_card(self, name: str) -> None:
+        self._dash_empty.grid_forget()
+        self.stats[name] = ModuleStats(name)
+        self.cards[name] = ModuleCard(self.dash_inner, name, self.ui_font, self._toggle_module_filter)
+        self._reflow()
+
+    def _reflow(self) -> None:
+        cols = max(1, self.dash_canvas.winfo_width() // CARD_MIN_W)
+        for c in range(max(cols, self._dash_cols)):
+            self.dash_inner.columnconfigure(c, weight=1 if c < cols else 0, uniform="cards" if c < cols else "")
+        self._dash_cols = cols
+        for i, name in enumerate(sorted(self.cards)):
+            self.cards[name].grid(row=i // cols, column=i % cols, padx=6, pady=6, sticky="nsew")
+
+    def _toggle_module_filter(self, name: str) -> None:
+        """Click a card: show only that module in the log. Click again: show all modules."""
+        if self._f_mods == {name}:
+            self.mod_list.selection_set(0, "end")
+        else:
+            self.mod_list.selection_clear(0, "end")
+            self.mod_list.selection_set(self.modules.index(name))
+        self._on_filter_changed()
+
+    def _refresh_dashboard(self) -> None:
+        now = time.monotonic()
+        for name, card in self.cards.items():
+            card.refresh(self.stats[name], now, self._connected, self._f_mods == {name})
+        self.after(DASH_REFRESH_MS, self._refresh_dashboard)
+
     def _set_status(self, state: str, text: str) -> None:
+        connected = state == "connected"
+        if connected and not self._connected:           # fresh connection: grace period for every heartbeat
+            now = time.monotonic()
+            for stats in self.stats.values():
+                for beat in stats.beats.values():
+                    beat.last_seen = now
+        self._connected = connected
         self.status_dot.configure(fg=OK_COLOR if state == "connected" else WAIT_COLOR)
         self.status_lbl.configure(text=text)
 

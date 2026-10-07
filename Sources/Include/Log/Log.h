@@ -11,7 +11,8 @@ enum class Severity : uint8_t
 {
     Info,
     Warning,
-    Error
+    Error,
+    Heartbeat
 };
 
 #pragma pack(push, 1)
@@ -60,6 +61,7 @@ inline bool Log(const char* module
 #define LogError(module, fmt, ...) Log(module, __FILE_NAME__, __LINE__, Severity::Error, fmt __VA_OPT__(,) __VA_ARGS__)
 #define LogWarning(module, fmt, ...) Log(module, __FILE_NAME__, __LINE__, Severity::Warning, fmt __VA_OPT__(,) __VA_ARGS__)
 #define LogInfo(module, fmt, ...) Log(module, __FILE_NAME__, __LINE__, Severity::Info, fmt __VA_OPT__(,) __VA_ARGS__)
+#define LogHeartbeat(module) Log(module, __FILE_NAME__, __LINE__, Severity::Heartbeat, "")
 
 #else
 
@@ -69,5 +71,6 @@ static inline bool LogStub(const char*, const char*, Args&&...) { return true; }
 #define LogError(module, fmt, ...) LogStub(module, fmt __VA_OPT__(,) __VA_ARGS__)
 #define LogWarning(module, fmt, ...) LogStub(module, fmt __VA_OPT__(,) __VA_ARGS__)
 #define LogInfo(module, fmt, ...) LogStub(module, fmt __VA_OPT__(,) __VA_ARGS__)
+#define LogInfo(module) LogStub(module, "")
 
 #endif

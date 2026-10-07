@@ -69,6 +69,8 @@ namespace Config
 
     namespace Task
     {
+        constexpr uint32_t HEARTBEAT_INTERVAL_MS = 1000;
+
         constexpr uint16_t HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE = 512;
         constexpr UBaseType_t HALF_DUPLEX_SOFTWARE_UART_PRIORITY = configMAX_PRIORITIES / 2 - 10;
 

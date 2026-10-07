@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <concepts>
+#include "Config.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
@@ -68,8 +69,20 @@ private:
         auto* self = static_cast<TaskThread*>(arg);
 
         TickType_t lastWakeTime = xTaskGetTickCount();
+#ifdef DEBUG
+        TickType_t lastHeartbeatTime = lastWakeTime;
+        constexpr TickType_t heartbeatInterval = pdMS_TO_TICKS(Config::Task::HEARTBEAT_INTERVAL_MS);
+#endif
+
         while (!self->m_isFinishing.load(std::memory_order_acquire))
         {
+#ifdef DEBUG
+            if ((xTaskGetTickCount() - lastHeartbeatTime) >= heartbeatInterval)
+            {
+                LogHeartbeat(self->m_taskName);
+                lastHeartbeatTime = xTaskGetTickCount();
+            }
+#endif
             self->m_logic.RunTaskIteration();
             if constexpr (Periodic)
                 vTaskDelayUntil(&lastWakeTime, self->m_period);
