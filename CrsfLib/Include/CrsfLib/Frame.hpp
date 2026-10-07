@@ -159,8 +159,6 @@ namespace CrsfLib
     }
 
     constexpr size_t MAX_FRAME_SIZE = 64;
-    constexpr size_t MAX_PAYLOAD_SIZE = 60;
-    constexpr size_t MAX_EXT_PAYLOAD_SIZE = 58;
 
     struct FrameView
     {
