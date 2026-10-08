@@ -75,6 +75,9 @@ namespace Config
 
     namespace Task
     {
+        constexpr uint8_t DELEGATE_TASK_DEPTH = 5;
+        constexpr uint8_t DELEGATE_TASK_SLOTS = 5;
+
         constexpr uint32_t HEARTBEAT_INTERVAL_MS = 1000;
 
         constexpr uint16_t HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE = 512;
