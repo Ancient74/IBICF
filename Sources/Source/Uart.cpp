@@ -45,6 +45,9 @@ Uart::~Uart()
 {
     for (auto& slot : s_instances)
         if (slot == this) { slot = nullptr; break; }
+    HAL_UART_Abort(&m_handle);
+    __HAL_UART_DISABLE_IT(&m_handle, UART_IT_IDLE);
+    __HAL_UART_CLEAR_IDLEFLAG(&m_handle);
 }
 
 void Uart::DispatchUartEvent(UART_HandleTypeDef* huart)
