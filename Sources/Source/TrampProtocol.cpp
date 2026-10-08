@@ -42,7 +42,7 @@ namespace
 }
 
 TrampFrameParser::TrampFrameParser(const char* taskName)
-    : m_thread(taskName, 0, *this)
+    : m_thread(taskName, *this)
 {
     m_inputQueue = xQueueCreateStatic(sizeof(m_inputQueueStorage), sizeof(uint8_t), m_inputQueueStorage, &m_inputQueueBuffer);
     configASSERT(m_inputQueue != nullptr);
@@ -124,7 +124,7 @@ void TrampFrameParser::RunTaskIteration()
 }
 
 TrampProtocolController::TrampProtocolController(const char* taskName)
-    : m_thread(taskName, pdMS_TO_TICKS(Config::TRAMP_PROTOCOL_POLLING_RATE_MS), *this)
+    : m_thread(taskName, *this)
 {
     m_desiredStateMutex = xSemaphoreCreateMutexStatic(&m_desiredStateBuffer);
     m_dataMutex = xSemaphoreCreateMutexStatic(&m_dataBuffer);

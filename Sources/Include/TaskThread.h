@@ -7,12 +7,12 @@
 #include "task.h"
 #include "Log.h"
 
-template<typename Logic, uint16_t StackDepth, UBaseType_t Priority, bool Periodic = true>
-class TaskThread
+template<typename Logic, uint16_t StackDepth, UBaseType_t Priority, TickType_t Period = 0>
+class TaskThread final
 {
 public:
-    TaskThread(const char* taskName, TickType_t period, Logic& logic)
-        : m_taskName(taskName), m_period(period), m_logic(logic) {}
+    TaskThread(const char* taskName, Logic& logic)
+        : m_taskName(taskName), m_logic(logic) {}
 
     ~TaskThread()
     {
@@ -84,8 +84,8 @@ private:
             }
 #endif
             self->m_logic.RunTaskIteration();
-            if constexpr (Periodic)
-                vTaskDelayUntil(&lastWakeTime, self->m_period);
+            if constexpr (Period > 0)
+                vTaskDelayUntil(&lastWakeTime, Period);
         }
 
         xSemaphoreGive(self->m_doneSem);
@@ -93,7 +93,6 @@ private:
     }
 
     const char* m_taskName;
-    TickType_t m_period;
     Logic& m_logic;
 
     TaskHandle_t m_task{};

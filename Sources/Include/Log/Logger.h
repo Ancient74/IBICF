@@ -19,7 +19,7 @@ public:
     void RunTaskIteration();
 private:
     inline static Logger* s_instance = nullptr;
-    TaskThread<Logger, Config::Task::LOGGER_STACK_SIZE, Config::Task::LOGGER_PRIORITY, false> m_thread;
+    TaskThread<Logger, Config::Task::LOGGER_STACK_SIZE, Config::Task::LOGGER_PRIORITY> m_thread;
 
     std::optional<LogMessage> m_pendingMessage = std::nullopt;
 

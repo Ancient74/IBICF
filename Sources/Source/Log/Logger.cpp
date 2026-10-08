@@ -30,7 +30,7 @@ namespace
 }
 
 Logger::Logger(const char* taskName)
-    : m_thread(taskName, 0, *this)
+    : m_thread(taskName, *this)
 {
     if (s_instance)
         return;

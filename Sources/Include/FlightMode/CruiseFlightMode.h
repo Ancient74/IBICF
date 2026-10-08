@@ -31,7 +31,8 @@ protected:
     void OnExitInternal() override;
 
 private:
-    TaskThread<CruiseFlightMode, Config::Task::CRUISE_FLIGHT_MODE_STACK_SIZE, Config::Task::CRUISE_FLIGHT_MODE_PRIORITY> m_thread;
+    TaskThread<CruiseFlightMode, Config::Task::CRUISE_FLIGHT_MODE_STACK_SIZE, Config::Task::CRUISE_FLIGHT_MODE_PRIORITY,
+        pdMS_TO_TICKS(1000 / Config::CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ)> m_thread;
 
     std::atomic<float> m_currentRollRad = 0.0f;
     std::atomic<float> m_currentPitchRad = 0.0f;

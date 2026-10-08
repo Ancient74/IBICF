@@ -17,7 +17,7 @@ public:
     using OutputType = SensorOutputT;
 
     SensorSamplingNode(SensorT& sensor, const char* taskName)
-        : m_thread(taskName, pdMS_TO_TICKS(1000 / sensor.GetSamplingRate()), *this),
+        : m_thread(taskName, *this),
           m_sensor(sensor) {}
 
     ~SensorSamplingNode()
@@ -47,7 +47,9 @@ public:
         }
     }
 
-    TaskThread<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, Config::Task::SENSOR_SAMPLING_NODE_STACK_SIZE, Config::Task::SENSOR_SAMPLING_NODE_PRIORITY> m_thread;
+    TaskThread<SensorSamplingNode<SensorT, SensorOutputT, MaxSubs>, Config::Task::SENSOR_SAMPLING_NODE_STACK_SIZE,
+        Config::Task::SENSOR_SAMPLING_NODE_PRIORITY,
+        pdMS_TO_TICKS(1000 / SensorT::GetSamplingRate())> m_thread;
     SensorT& m_sensor;
     Status m_lastStatus{Status::Ok};
 };

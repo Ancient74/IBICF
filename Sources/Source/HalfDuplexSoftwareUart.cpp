@@ -24,7 +24,7 @@ extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 HalfDuplexSoftwareUart::HalfDuplexSoftwareUart(uint16_t pin, GPIO_TypeDef* port, TIM_HandleTypeDef& timer, uint32_t baudRate)
-    : m_thread("HalfDuplexUart", 0, *this)
+    : m_thread("HalfDuplexUart", *this)
     , m_pin(pin)
     , m_port(port)
     , m_timer(timer)

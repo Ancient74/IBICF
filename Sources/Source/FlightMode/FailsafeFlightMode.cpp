@@ -3,7 +3,7 @@
 #include "Config.h"
 
 FailsafeFlightMode::FailsafeFlightMode(const char* taskName)
-    : m_thread(taskName, pdMS_TO_TICKS(1000 / Config::CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ), *this)
+    : m_thread(taskName, *this)
     , m_rollPid(
         Config::ROLL_Kp,
         Config::ROLL_Ki,

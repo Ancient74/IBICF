@@ -28,7 +28,8 @@ protected:
     void OnExitInternal() override;
 
 private:
-    TaskThread<FailsafeFlightMode, Config::Task::FAILSAFE_FLIGHT_MODE_STACK_SIZE, Config::Task::FAILSAFE_FLIGHT_MODE_PRIORITY> m_thread;
+    TaskThread<FailsafeFlightMode, Config::Task::FAILSAFE_FLIGHT_MODE_STACK_SIZE, Config::Task::FAILSAFE_FLIGHT_MODE_PRIORITY,
+        pdMS_TO_TICKS(1000 / Config::CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ)> m_thread;
 
     std::atomic<float> m_currentRollRad = 0.0f;
     std::atomic<float> m_currentPitchRad = 0.0f;

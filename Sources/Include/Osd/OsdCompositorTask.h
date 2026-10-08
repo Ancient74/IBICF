@@ -5,12 +5,14 @@
 #include "Config.h"
 #include "OsdRenderer.h"
 
-template<uint8_t RenderersAmount>
+template<uint8_t RenderersAmount, uint16_t UpdateRateHz = Config::OSD_REFRESH_RATE_HZ>
 class OsdCompositorTask
 {
 public:
-    OsdCompositorTask(const char* taskName, uint16_t updateRateHz)
-        : m_thread(taskName, pdMS_TO_TICKS(1000 / updateRateHz), *this) {}
+    static_assert(UpdateRateHz > 0, "UpdateRateHz must be greater than zero");
+
+    explicit OsdCompositorTask(const char* taskName)
+        : m_thread(taskName, *this) {}
 
     ~OsdCompositorTask() { m_thread.Stop(); }
 
@@ -30,7 +32,8 @@ public:
     }
 
 private:
-    TaskThread<OsdCompositorTask<RenderersAmount>, Config::Task::OSD_COMPOSITOR_TASK_STACK_SIZE, Config::Task::OSD_COMPOSITOR_TASK_PRIORITY> m_thread;
+    TaskThread<OsdCompositorTask<RenderersAmount, UpdateRateHz>, Config::Task::OSD_COMPOSITOR_TASK_STACK_SIZE,
+        Config::Task::OSD_COMPOSITOR_TASK_PRIORITY, pdMS_TO_TICKS(1000 / UpdateRateHz)> m_thread;
     std::array<IOsdRenderable*, RenderersAmount> m_renderables{};
     uint8_t m_count{0};
 };

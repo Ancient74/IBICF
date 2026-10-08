@@ -3,7 +3,7 @@
 #include "FreeRTOSConfig.h"
 
 CrsfFrameReaderNode::CrsfFrameReaderNode(const char* taskName)
-    : m_thread(taskName, 0, *this)
+    : m_thread(taskName, *this)
 {
     m_streamBuffer = xStreamBufferCreateStatic(Config::CRSF_READER_BUFFER_SIZE, 1, m_buffer, &m_streamBufferBuffer);
     configASSERT(m_streamBuffer != nullptr);

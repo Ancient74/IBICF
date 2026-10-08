@@ -15,23 +15,25 @@ struct BatteryInfo
     uint8_t percentLevel;
 };
 
-template<float MaxBatteryVoltage, float MinBatteryVoltage, float AdcInMaxVoltage>
+template<float MaxBatteryVoltage, float MinBatteryVoltage, float AdcInMaxVoltage,
+         uint32_t SamplingRateHz = Config::BATTERY_SAMPLING_RATE_HZ>
 class BatterySensorNode
-    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, BatteryInfo, 1>
+    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage, SamplingRateHz>, BatteryInfo, 1>
 {
     static_assert(MaxBatteryVoltage > MinBatteryVoltage,
         "MaxBatteryVoltage must be greater than MinBatteryVoltage");
+    static_assert(SamplingRateHz > 0, "SamplingRateHz must be greater than zero");
 
 public:
-    BatterySensorNode(AdcSensor& adcSensor, const char* taskName, uint32_t samplingRateHz)
-        : m_thread(taskName, pdMS_TO_TICKS(1000 / samplingRateHz), *this)
+    BatterySensorNode(AdcSensor& adcSensor, const char* taskName)
+        : m_thread(taskName, *this)
         , m_adcSensor(adcSensor)
     {
         const uint32_t adcConversionRateHz = m_adcSensor.GetSamplingRate();
         configASSERT(adcConversionRateHz > 0
             && "AdcSensor::GetSamplingRate() returned 0 - check ClockPrescaler config");
 
-        const float maxSamplesF = (static_cast<float>(adcConversionRateHz) / static_cast<float>(samplingRateHz));
+        const float maxSamplesF = (static_cast<float>(adcConversionRateHz) / static_cast<float>(SamplingRateHz));
         const uint32_t maxSamples = static_cast<uint32_t>(maxSamplesF);
 
         uint32_t ratio = 1;
@@ -43,7 +45,7 @@ public:
         }
 
         configASSERT(ratio >= 4
-            && "samplingRateHz too high for this ADC's conversion rate: "
+            && "SamplingRateHz too high for this ADC's conversion rate: "
                "not even one extra bit of oversampling fits in the period");
 
         m_oversampleCount = ratio;
@@ -96,7 +98,9 @@ public:
     }
 
 private:
-    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage>, Config::Task::BATTERY_SENSOR_NODE_STACK_SIZE, Config::Task::BATTERY_SENSOR_NODE_PRIORITY> m_thread;
+    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage, SamplingRateHz>,
+        Config::Task::BATTERY_SENSOR_NODE_STACK_SIZE, Config::Task::BATTERY_SENSOR_NODE_PRIORITY,
+        pdMS_TO_TICKS(1000 / SamplingRateHz)> m_thread;
     AdcSensor& m_adcSensor;
     Status m_lastStatus{Status::Ok};
     bool m_readingFailed{false};

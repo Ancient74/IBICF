@@ -147,7 +147,7 @@ extern "C" void main_cpp()
         LogWarning(MODULE, "BME280 unavailable (status=%d); altitude input disabled", static_cast<int>(bmeStatus));
 
     static AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
-    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor", Config::BATTERY_SAMPLING_RATE_HZ};
+    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor"};
 
     static OsdResponseReader osdReader{};
     static Uart osdUart{huart2, osdReader};
@@ -159,7 +159,7 @@ extern "C" void main_cpp()
     static OsdRcLinkNode osdRcLinkNode{osdController};
     static OsdAltitudeNode osdAltitudeNode{osdController};
 
-    static OsdCompositorTask<6> osdCompositorTask{"OsdRenderer", Config::OSD_REFRESH_RATE_HZ};
+    static OsdCompositorTask<6> osdCompositorTask{"OsdRenderer"};
     osdCompositorTask.Register(osdHorizonNode);
     osdCompositorTask.Register(osdBatteryInfoNode);
     osdCompositorTask.Register(osdFlightModeNode);

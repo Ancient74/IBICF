@@ -95,7 +95,7 @@ private:
         Checksum,
         Footer
     } m_state = TrampFrameParser::State::SyncFrame;
-    TaskThread<TrampFrameParser, Config::Task::TRAMP_FRAME_PARSER_STACK_SIZE, Config::Task::TRAMP_FRAME_PARSER_PRIORITY, false> m_thread;
+    TaskThread<TrampFrameParser, Config::Task::TRAMP_FRAME_PARSER_STACK_SIZE, Config::Task::TRAMP_FRAME_PARSER_PRIORITY> m_thread;
 
     QueueHandle_t m_inputQueue;
     StaticQueue_t m_inputQueueBuffer;
@@ -155,7 +155,8 @@ private:
     void MarkResponseReceived();
     bool HasResponseTimedOut() const;
 
-    TaskThread<TrampProtocolController, Config::Task::TRAMP_PROTOCOL_CONTROLLER_STACK_SIZE, Config::Task::TRAMP_PROTOCOL_CONTROLLER_PRIORITY> m_thread;
+    TaskThread<TrampProtocolController, Config::Task::TRAMP_PROTOCOL_CONTROLLER_STACK_SIZE, Config::Task::TRAMP_PROTOCOL_CONTROLLER_PRIORITY,
+        pdMS_TO_TICKS(Config::TRAMP_PROTOCOL_POLLING_RATE_MS)> m_thread;
 
     std::atomic<TrampConnectionState> m_connectionState = TrampConnectionState::Offline;
     std::atomic<TickType_t> m_lastResponseTick = 0;

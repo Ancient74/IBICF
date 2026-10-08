@@ -94,7 +94,7 @@ public:
     using OutputType = Quaternion<float>;
 
     SensorFusionNode(const char* taskName, float nominalDt, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
-        : m_thread(taskName, 0, *this)
+        : m_thread(taskName, *this)
         , m_core(accelR, magnetR, N), m_nominalDt(nominalDt)
     {
         m_sampleQueue = xQueueCreateStatic(Config::SENSOR_FUSION_NODE_QUEUE_SIZE, sizeof(FusionSample), m_sampleQueueStorage, &m_sampleQueueBuffer);
@@ -163,7 +163,7 @@ private:
         xQueueSend(m_sampleQueue, &item, 0);
     }
 
-    TaskThread<SensorFusionNode<MaxSubs>, Config::Task::SENSOR_FUSION_NODE_STACK_SIZE, Config::Task::SENSOR_FUSION_NODE_PRIORITY, false> m_thread;
+    TaskThread<SensorFusionNode<MaxSubs>, Config::Task::SENSOR_FUSION_NODE_STACK_SIZE, Config::Task::SENSOR_FUSION_NODE_PRIORITY> m_thread;
 
     ImuPort m_imuPort{this};
     MagPort m_magPort{this};
