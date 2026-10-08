@@ -34,8 +34,9 @@ public:
         }, "Logic must provide void RunTaskIteration()");
 
         bool expected = false;
-        configASSERT(m_started.compare_exchange_strong(expected, true) &&
-                     "Start() called twice / concurrently");
+        const bool ok = m_started.compare_exchange_strong(expected, true);
+        configASSERT(ok && "Start() called twice / concurrently");
+        (void)ok;
 
         m_isFinishing.store(false, std::memory_order_relaxed); // allow restart
 
