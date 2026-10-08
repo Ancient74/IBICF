@@ -29,8 +29,19 @@ public:
     Status GetRawValues(Magnetometer& magnetometer);
     void Normalize(Magnetometer& magnetometer);
     void GetSensorVariance(Matrix3f& R);
-    uint16_t GetSamplingRate() const;
+    static constexpr uint16_t GetSamplingRate() noexcept
+    {
+        switch (SamplingRateSetting)
+        {
+        case 0b00: return 10;
+        case 0b01: return 50;
+        case 0b10: return 100;
+        case 0b11: return 200;
+        default:   return 10;
+        }
+    }
 
 private:
+    static constexpr uint16_t SamplingRateSetting = 0b10;
     float m_resolution;
 };

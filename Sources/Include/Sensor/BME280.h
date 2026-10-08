@@ -1,6 +1,7 @@
 #pragma once
 #include "I2cSensor.h"
 #include "math.h"
+#include <array>
 
 struct Raw20
 {
@@ -81,9 +82,26 @@ public:
 
     void Calibrate(Measurements& baseMeasurements);
 
-    uint16_t GetSamplingRate() const;
+    static constexpr uint16_t GetSamplingRate() noexcept
+    {
+        constexpr float measureMaxMs = 1.25f
+            + 2.3f * OversamplingTemperature
+            + 2.3f * OversamplingPressure + 0.575f
+            + 2.3f * OversamplingHumidity + 0.575f;
+        constexpr float periodMs = measureMaxMs + StandbyTimesMs[StandbyRegister];
+        return static_cast<uint16_t>((1000.0f / periodMs) + 0.5f);
+    }
 
 private:
+    static constexpr uint8_t OversamplingTemperature = 1;
+    static constexpr uint8_t OversamplingPressure = 1;
+    static constexpr uint8_t OversamplingHumidity = 1;
+    static constexpr uint8_t Mode = 3;
+    static constexpr uint8_t StandbyRegister = 0;
+    inline static constexpr std::array<float, 8> StandbyTimesMs = {
+        0.5f, 62.5f, 125.0f, 250.0f, 500.0f, 1000.0f, 10.0f, 20.0f
+    };
+
     struct BmeData
     {
         Raw20 pressure;
@@ -117,5 +135,3 @@ inline BME280::Measurements operator*(const BME280::Measurements& a, float mult)
         static_cast<uint32_t>(std::lround(a.humidity * mult))
     };
 }
-
-

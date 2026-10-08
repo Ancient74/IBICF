@@ -7,8 +7,6 @@ namespace
     constexpr uint16_t QMC5883L_SET_RESET = 0x0B;
     constexpr uint16_t QMC5883L_CONTROL_REGISTER = 0x09;
     constexpr uint16_t QMC5883L_X_LSB_REGISTER = 0x00;
-    constexpr uint16_t QMC5883L_SAMPLING_RATE = 0b10;
-
     constexpr float MAGNET_BIAS[3] = { 515.798978f, -47.838570f, -108.972277f };
     constexpr float MAGNET_MATRIX[3][3] = {
         { 1.241897f, -0.050880f, -0.096114f },
@@ -83,7 +81,7 @@ Status Qmc5883L::Start()
 
     ControlRegister control{};
     control.bits.mode = 0b01;
-    control.bits.outputDataRate = QMC5883L_SAMPLING_RATE; // 100Hz
+    control.bits.outputDataRate = SamplingRateSetting; // 100Hz
     control.bits.range = 0b01; // 8G
     control.bits.overSampleRatio = 0b01; // 256
     ret = WriteByte(QMC5883L_CONTROL_REGISTER, control.value);
@@ -122,24 +120,6 @@ void Qmc5883L::Normalize(Magnetometer& magnetometer)
     magnetometer.x = corrected(0,0);
     magnetometer.y = corrected(1,0);
     magnetometer.z = corrected(2,0);
-}
-
-uint16_t Qmc5883L::GetSamplingRate() const
-{
-    switch (QMC5883L_SAMPLING_RATE)
-    {
-    case 0b00:
-        return 10;
-    case 0b01:
-        return 50;
-    case 0b10:
-        return 100;
-    case 0b11:
-        return 200;
-
-    default:
-        return 10;
-    }
 }
 
 void Qmc5883L::GetSensorVariance(Matrix3f& R)

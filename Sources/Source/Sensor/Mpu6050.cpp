@@ -18,11 +18,6 @@ namespace
     constexpr uint16_t MPU6050_ACCEL_XOUT_H = 0X3B;
     constexpr uint16_t MPU6050_PWR_MGMT_1 = 0X6B;
 
-    constexpr uint8_t DLPF_VALUE = 3;
-    constexpr uint16_t GYRO_SAMPLING_RATE = DLPF_VALUE > 0 ? 1000 : 8000;
-    constexpr uint16_t ACCELEROMETER_SAMPLING_RATE = 1000;
-    constexpr uint8_t CLOCK_PRESCALER = (GYRO_SAMPLING_RATE / ACCELEROMETER_SAMPLING_RATE) -1;
-
     constexpr float ACCELEROMETER_BIAS[3] = { 1.926794f, -10.027902f, 3.518213f };
     constexpr float ACCELEROMETER_MATRIX[3][3] = {
         { 0.989325f, 0.007474f, 0.009166f },
@@ -175,7 +170,7 @@ Status Mpu6050::Start()
     vTaskDelay(pdMS_TO_TICKS(10));
 
     ConfigRegister config{};
-    config.bits.dlpfConfig = DLPF_VALUE;
+    config.bits.dlpfConfig = DlpfValue;
     ret = WriteByte(MPU6050_CONFIG, config.value);
     if (ret != Status::Ok)
         return ret;
@@ -184,7 +179,7 @@ Status Mpu6050::Start()
     // Else it is set to 1kHz
     // We want a prescaler to get 1kHz sampling rate
     // Which matches accelerometer sampling rate
-    ret = WriteByte(MPU6050_SMPRT_DIV, CLOCK_PRESCALER);
+    ret = WriteByte(MPU6050_SMPRT_DIV, ClockPrescaler);
     if (ret != Status::Ok)
         return ret;
 
@@ -289,9 +284,4 @@ void Mpu6050::Calibrate(Matrix3f& R, Matrix3f& N)
     R(0, 0) = ax.Variance();
     R(1, 1) = ay.Variance();
     R(2, 2) = az.Variance();
-}
-
-uint16_t Mpu6050::GetSamplingRate() const
-{
-    return GYRO_SAMPLING_RATE / (CLOCK_PRESCALER + 1);
 }

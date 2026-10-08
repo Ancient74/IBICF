@@ -64,9 +64,17 @@ public:
     // N is prediction covariance of angles based on gyro integration
     void Calibrate(Matrix3f& R, Matrix3f& N);
 
-    uint16_t GetSamplingRate() const;
+    static constexpr uint16_t GetSamplingRate() noexcept
+    {
+        return GyroSamplingRate / (ClockPrescaler + 1);
+    }
 
 private:
+    static constexpr uint8_t DlpfValue = 3;
+    static constexpr uint16_t GyroSamplingRate = DlpfValue > 0 ? 1000 : 8000;
+    static constexpr uint16_t AccelerometerSamplingRate = 1000;
+    static constexpr uint8_t ClockPrescaler = (GyroSamplingRate / AccelerometerSamplingRate) - 1;
+
     std::array<float, 3> m_gyroCalibration{};
     float m_accelerometerResolution;
     float m_gyroResolution;
