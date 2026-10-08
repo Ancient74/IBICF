@@ -12,6 +12,11 @@ extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t S
     Uart::DispatchUartEvent(huart);
 }
 
+extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    Uart::DispatchUartError(huart);
+}
+
 std::array<Uart*, Uart::kMaxInstances> Uart::s_instances{};
 
 Uart::Uart(UART_HandleTypeDef& handle, IReader& reader)
@@ -44,6 +49,18 @@ void Uart::DispatchUartEvent(UART_HandleTypeDef* huart)
     }
 }
 
+void Uart::DispatchUartError(UART_HandleTypeDef* huart)
+{
+    for (auto instance : s_instances)
+    {
+        if (instance && &instance->m_handle == huart)
+        {
+            instance->OnUartError();
+            return;
+        }
+    }
+}
+
 void Uart::OnUartEvent()
 {
     const uint16_t head = (m_buffer.size() - __HAL_DMA_GET_COUNTER(m_handle.hdmarx)) & WRAP_MASK;
@@ -61,6 +78,12 @@ void Uart::OnUartEvent()
     }
 
     m_lastPosition = head;
+}
+
+void Uart::OnUartError()
+{
+    m_lastPosition = 0;
+    HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
 }
 
 void Uart::Write(std::span<const uint8_t> buffer)

@@ -33,11 +33,13 @@ public:
     void Write(std::span<const uint8_t> buffer) override;
 
     static void DispatchUartEvent(UART_HandleTypeDef* huart);
+    static void DispatchUartError(UART_HandleTypeDef* huart);
 private:
     static constexpr size_t kMaxInstances = 4;
     static std::array<Uart*, kMaxInstances> s_instances;
 
     void OnUartEvent();
+    void OnUartError();
 
     UART_HandleTypeDef& m_handle;
     IReader& m_reader;
