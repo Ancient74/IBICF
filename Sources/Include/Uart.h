@@ -35,8 +35,16 @@ public:
     static void DispatchUartEvent(UART_HandleTypeDef* huart);
     static void DispatchUartError(UART_HandleTypeDef* huart);
 private:
-    static constexpr size_t kMaxInstances = 4;
-    static std::array<Uart*, kMaxInstances> s_instances;
+    static constexpr uint8_t s_instanceCount = 2
+#ifdef UART3
+        + 1
+#endif
+#ifdef UART4
+        + 1
+#endif
+        ;
+
+    static inline std::array<Uart*, s_instanceCount> s_instances{};
 
     void OnUartEvent();
     void OnUartError();

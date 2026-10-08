@@ -29,8 +29,6 @@ extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     Uart::DispatchUartError(huart);
 }
 
-std::array<Uart*, Uart::kMaxInstances> Uart::s_instances{};
-
 Uart::Uart(UART_HandleTypeDef& handle, IReader& reader)
     : m_handle(handle)
     , m_reader(reader)
