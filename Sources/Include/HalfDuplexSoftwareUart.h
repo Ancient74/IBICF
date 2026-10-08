@@ -34,7 +34,7 @@ private:
     void DelayPeriod(uint16_t period);
     void ArmExti();
 
-    TaskThread<HalfDuplexSoftwareUart, Config::Task::HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE, Config::Task::HALF_DUPLEX_SOFTWARE_UART_PRIORITY> m_thread;
+    TaskThread<HalfDuplexSoftwareUart, Config::Task::HALF_DUPLEX_SOFTWARE_UART_STACK_SIZE, Config::Task::HALF_DUPLEX_SOFTWARE_UART_PRIORITY, false> m_thread;
 
     StreamBufferHandle_t m_writeStream;
     StaticStreamBuffer_t m_writeStreamBuffer;
