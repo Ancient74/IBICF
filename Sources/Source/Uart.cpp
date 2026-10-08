@@ -5,6 +5,18 @@
 namespace
 {
     constexpr auto WRAP_MASK = Config::UART_RX_BUFFER_SIZE - 1;
+
+    uint8_t GetUartId(const UART_HandleTypeDef& huart) {
+        if (huart.Instance == USART1) return 1;
+        if (huart.Instance == USART2) return 2;
+        #ifdef UART3
+        if (huart.Instance == USART3) return 3;
+        #endif
+        #ifdef UART4
+        if (huart.Instance == UART4)  return 4;
+        #endif
+        return 0; // Unknown or error
+    }
 }
 
 extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
@@ -28,7 +40,7 @@ Uart::Uart(UART_HandleTypeDef& handle, IReader& reader)
     }
     const auto status = HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
     if (status != HAL_OK)
-        LogError("UART", "Failed to start RX (status=%d)", static_cast<int>(status));
+        LogError("UART", "Failed to start RX (instance=%d, status=%d)", GetUartId(m_handle), static_cast<int>(status));
 }
 
 Uart::~Uart()
@@ -90,6 +102,6 @@ void Uart::Write(std::span<const uint8_t> buffer)
 {
     const auto status = HAL_UART_Transmit(&m_handle, buffer.data(), static_cast<uint16_t>(buffer.size()), 100);
     if (status != HAL_OK)
-        LogWarning("UART", "Transmit failed (status=%d, bytes=%u)", static_cast<int>(status),
+        LogWarning("UART", "Transmit failed (instance=%d, status=%d, bytes=%u)", GetUartId(m_handle), static_cast<int>(status),
                    static_cast<unsigned>(buffer.size()));
 }
