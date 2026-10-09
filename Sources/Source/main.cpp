@@ -156,7 +156,7 @@ extern "C" void main_cpp()
     static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor"};
 
     static OsdResponseReader osdReader{};
-    static Uart osdUart{huart2, osdReader};
+    static Uart osdUart{huart2, osdReader, watchdog};
     static OsdModule osdModule{osdUart, osdReader};
     static OsdController osdController{osdModule};
     static OsdHorizonNode osdHorizonNode{osdController};
@@ -209,7 +209,7 @@ extern "C" void main_cpp()
     static CrsfFrameReaderNode crsfFrameReader{"CrsfReader"};
     static CrsfLib::FrameParserNode crsfFrameParser{};
     static CrsfFrameProcessorNode<2> crsfFrameProcessor{};
-    static Uart crsfUart{huart1, crsfFrameReader};
+    static Uart crsfUart{huart1, crsfFrameReader, watchdog};
     static DeviceInfoWriteNode crsfDeviceInfo{crsfUart};
 
     Connect(crsfFrameReader, crsfFrameParser);

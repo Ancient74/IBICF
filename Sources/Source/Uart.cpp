@@ -21,8 +21,6 @@ namespace
     }
 }
 
-extern TaskDelegate watchdog;
-
 extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     Uart::DispatchUartEvent(huart);
@@ -33,9 +31,10 @@ extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     Uart::DispatchUartError(huart);
 }
 
-Uart::Uart(UART_HandleTypeDef& handle, IReader& reader)
+Uart::Uart(UART_HandleTypeDef& handle, IReader& reader, TaskDelegate& watchdog)
     : m_handle(handle)
     , m_reader(reader)
+    , m_watchdog(watchdog)
 {
     for (auto& slot : s_instances) {
         if (slot == nullptr) { slot = this; break; }
@@ -102,7 +101,7 @@ void Uart::OnUartError()
     m_lastPosition = 0;
     const auto status = HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
     if (status != HAL_OK)
-        watchdog.PostMember<Uart, &Uart::Restart>(this);
+        m_watchdog.PostMember<Uart, &Uart::Restart>(this);
 }
 
 void Uart::Restart()
@@ -128,7 +127,7 @@ void Uart::Restart()
 
     ++m_failedArms;
     LogError(MODULE, "Failed to start RX (instance=%d, status=%d, attempt=%u)", GetUartId(m_handle), static_cast<int>(status), m_failedArms);
-    watchdog.PostMemberDelayed<Uart, &Uart::Restart>(this, pdMS_TO_TICKS(Config::UART_RESTART_INTERVAL_MS));
+    m_watchdog.PostMemberDelayed<Uart, &Uart::Restart>(this, pdMS_TO_TICKS(Config::UART_RESTART_INTERVAL_MS));
 }
 
 void Uart::Write(std::span<const uint8_t> buffer)

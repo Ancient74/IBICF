@@ -6,6 +6,8 @@
 #include <atomic>
 #include "Config.h"
 
+class TaskDelegate;
+
 class IReader
 {
 public:
@@ -23,7 +25,7 @@ public:
 class Uart : public IWriter
 {
 public:
-    Uart(UART_HandleTypeDef& handle, IReader& reader);
+    Uart(UART_HandleTypeDef& handle, IReader& reader, TaskDelegate& watchdog);
     ~Uart();
 
     Uart(const Uart&) = delete;
@@ -54,6 +56,7 @@ private:
 
     UART_HandleTypeDef& m_handle;
     IReader& m_reader;
+    TaskDelegate& m_watchdog;
     std::atomic<uint16_t> m_lastPosition = 0;
     uint16_t m_failedArms = 0;
     std::array<uint8_t, Config::UART_RX_BUFFER_SIZE> m_buffer{};
