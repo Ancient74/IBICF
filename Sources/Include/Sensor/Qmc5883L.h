@@ -22,7 +22,7 @@ inline Magnetometer operator*(const Magnetometer& a, float mult)
 class Qmc5883L : private I2cSensor
 {
 public:
-    Qmc5883L(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex);
+    Qmc5883L(I2cBus& bus);
 
     Status Start();
 

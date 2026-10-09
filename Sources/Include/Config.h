@@ -20,6 +20,7 @@ namespace Config
     constexpr uint16_t MPU_RESET_TIMEOUT = 100;
 
     constexpr uint16_t I2C_READ_WRITE_TIMEOUT = 100;
+    constexpr uint8_t I2C_RETRY_ATTEMPTS = 3;
 
     constexpr uint16_t SW_UART_BUFFER_SIZE = 256;
     constexpr uint16_t SW_UART_CHUNK_SIZE = 16;

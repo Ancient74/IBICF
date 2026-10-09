@@ -79,7 +79,7 @@ extern "C" void main_cpp()
 
     static I2cBus bus{hi2c2};
     bus.ScanBus();
-    static Mpu6050 mpuSensor{hi2c2, bus.Mutex()};
+    static Mpu6050 mpuSensor{bus};
     const auto mpuStatus = mpuSensor.Start();
     if (mpuStatus != Status::Ok)
         LogError(MODULE, "MPU6050 initialization failed (status=%d)", static_cast<int>(mpuStatus));
@@ -103,7 +103,7 @@ extern "C" void main_cpp()
     }
     static SensorSamplingNode<Mpu6050, GyroscopeAccelerometer, 1> mpuNode{mpuSensor, "MPU"};
 
-    static Qmc5883L qmcSensor{hi2c2, bus.Mutex()};
+    static Qmc5883L qmcSensor{bus};
     static SensorSamplingNode<Qmc5883L, Magnetometer, 1> qmcNode{qmcSensor, "QMC"};
     bool useQmc = false;
     if (Config::ENABLE_MAGNETOMETER_CORRECTION)
@@ -133,7 +133,7 @@ extern "C" void main_cpp()
     Connect(mpuNode, fusion.ImuInput());
     mpuNode.Start();
 
-    static BME280 bmeSensor{hi2c2, bus.Mutex()};
+    static BME280 bmeSensor{bus};
 
     static SensorSamplingNode<BME280, BME280::Measurements, 1> bmeNode{bmeSensor, "BME"};
     static EmaFilterNode<BME280::Measurements, 1> bmeFilterNode{0.1f, 5};

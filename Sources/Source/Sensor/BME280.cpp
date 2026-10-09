@@ -6,8 +6,8 @@ namespace
     constexpr uint16_t CALIBRATION_SAMPLES = 32;
 }
 
-BME280::BME280(I2C_HandleTypeDef& handle, SemaphoreHandle_t mutex, uint16_t address)
-    : I2cSensor(handle, mutex, address)
+BME280::BME280(I2cBus& bus, uint16_t address)
+    : I2cSensor(bus, address)
 {}
 
 Status BME280::Start()

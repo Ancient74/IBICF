@@ -132,7 +132,7 @@ namespace
     }
 }
 
-Mpu6050::Mpu6050(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex) : I2cSensor(i2c, mutex, MPU6050_ADDRESS)
+Mpu6050::Mpu6050(I2cBus& bus) : I2cSensor(bus, MPU6050_ADDRESS)
 {}
 
 Status Mpu6050::Start()

@@ -68,7 +68,7 @@ namespace
 
 }
 
-Qmc5883L::Qmc5883L(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex) : I2cSensor(i2c, mutex, QMC5883L_ADDRESS)
+Qmc5883L::Qmc5883L(I2cBus& bus) : I2cSensor(bus, QMC5883L_ADDRESS)
 {}
 
 Status Qmc5883L::Start()

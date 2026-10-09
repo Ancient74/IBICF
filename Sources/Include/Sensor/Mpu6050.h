@@ -53,7 +53,7 @@ inline GyroscopeAccelerometer operator*(const GyroscopeAccelerometer& a, float m
 class Mpu6050 : private I2cSensor
 {
 public:
-    Mpu6050(I2C_HandleTypeDef& i2c, SemaphoreHandle_t mutex);
+    Mpu6050(I2cBus& bus);
 
     Status Start();
 

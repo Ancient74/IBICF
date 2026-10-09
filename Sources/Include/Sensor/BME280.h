@@ -73,7 +73,7 @@ public:
     // 0x76 if SDO is tied low, 0x77 if SDO is tied high.
     static constexpr uint16_t kDefaultAddress = 0x76;
 
-    BME280(I2C_HandleTypeDef& handle, SemaphoreHandle_t mutex, uint16_t address = kDefaultAddress);
+    BME280(I2cBus& bus, uint16_t address = kDefaultAddress);
 
     Status Start();
 
