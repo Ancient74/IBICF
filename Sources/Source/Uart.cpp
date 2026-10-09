@@ -1,10 +1,12 @@
 #include "Uart.h"
 #include "Config.h"
 #include "Log.h"
+#include "TaskDelegate.h"
 
 namespace
 {
     constexpr auto WRAP_MASK = Config::UART_RX_BUFFER_SIZE - 1;
+    constexpr const char* MODULE = "UART";
 
     uint8_t GetUartId(const UART_HandleTypeDef& huart) {
         if (huart.Instance == USART1) return 1;
@@ -18,6 +20,8 @@ namespace
         return 0; // Unknown or error
     }
 }
+
+extern TaskDelegate watchdog;
 
 extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -38,7 +42,7 @@ Uart::Uart(UART_HandleTypeDef& handle, IReader& reader)
     }
     const auto status = HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
     if (status != HAL_OK)
-        LogError("UART", "Failed to start RX (instance=%d, status=%d)", GetUartId(m_handle), static_cast<int>(status));
+        LogError(MODULE, "Failed to start RX (instance=%d, status=%d)", GetUartId(m_handle), static_cast<int>(status));
 }
 
 Uart::~Uart()
@@ -96,13 +100,41 @@ void Uart::OnUartEvent()
 void Uart::OnUartError()
 {
     m_lastPosition = 0;
-    HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
+    const auto status = HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
+    if (status != HAL_OK)
+        watchdog.PostMember<Uart, &Uart::Restart>(this);
+}
+
+void Uart::Restart()
+{
+    HAL_UART_AbortReceive(&m_handle);
+    __HAL_UART_CLEAR_OREFLAG(&m_handle);
+    __HAL_UART_FLUSH_DRREGISTER(&m_handle);
+
+    if (m_failedArms >= Config::UART_REINIT_AFTER_ATTEMPTS)
+    {
+        HAL_UART_DeInit(&m_handle);
+        HAL_UART_Init(&m_handle);
+    }
+
+    m_lastPosition = 0;
+    const auto status = HAL_UARTEx_ReceiveToIdle_DMA(&m_handle, m_buffer.data(), m_buffer.size());
+    if (status == HAL_OK)
+    {
+        m_failedArms = 0;
+        LogInfo(MODULE, "Uart recovered (instance=%d)", GetUartId(m_handle));
+        return;
+    }
+
+    ++m_failedArms;
+    LogError(MODULE, "Failed to start RX (instance=%d, status=%d, attempt=%u)", GetUartId(m_handle), static_cast<int>(status), m_failedArms);
+    watchdog.PostMemberDelayed<Uart, &Uart::Restart>(this, pdMS_TO_TICKS(Config::UART_RESTART_INTERVAL_MS));
 }
 
 void Uart::Write(std::span<const uint8_t> buffer)
 {
     const auto status = HAL_UART_Transmit(&m_handle, buffer.data(), static_cast<uint16_t>(buffer.size()), 100);
     if (status != HAL_OK)
-        LogWarning("UART", "Transmit failed (instance=%d, status=%d, bytes=%u)", GetUartId(m_handle), static_cast<int>(status),
+        LogWarning(MODULE, "Transmit failed (instance=%d, status=%d, bytes=%u)", GetUartId(m_handle), static_cast<int>(status),
                    static_cast<unsigned>(buffer.size()));
 }

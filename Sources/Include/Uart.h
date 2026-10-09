@@ -3,6 +3,7 @@
 #include <array>
 #include <span>
 #include <bit>
+#include <atomic>
 #include "Config.h"
 
 class IReader
@@ -32,6 +33,8 @@ public:
 
     void Write(std::span<const uint8_t> buffer) override;
 
+    void Restart();
+
     static void DispatchUartEvent(UART_HandleTypeDef* huart);
     static void DispatchUartError(UART_HandleTypeDef* huart);
 private:
@@ -51,7 +54,8 @@ private:
 
     UART_HandleTypeDef& m_handle;
     IReader& m_reader;
-    uint16_t m_lastPosition = 0;
+    std::atomic<uint16_t> m_lastPosition = 0;
+    uint16_t m_failedArms = 0;
     std::array<uint8_t, Config::UART_RX_BUFFER_SIZE> m_buffer{};
     static_assert(std::has_single_bit(Config::UART_RX_BUFFER_SIZE));
 };

@@ -14,6 +14,8 @@ namespace Config
     constexpr uint32_t BATTERY_SAMPLING_RATE_HZ = 20;
 
     constexpr uint16_t UART_RX_BUFFER_SIZE = 256;
+    constexpr uint16_t UART_RESTART_INTERVAL_MS = 500;
+    constexpr uint16_t UART_REINIT_AFTER_ATTEMPTS = 10;
 
     constexpr uint16_t MPU_RESET_TIMEOUT = 100;
 

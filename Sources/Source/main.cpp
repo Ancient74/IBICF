@@ -33,6 +33,7 @@
 #include <OsdVtxInfo.h>
 #include "VtxControllerNode.h"
 #include <OsdRcLinkNode.h>
+#include "TaskDelegate.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -40,6 +41,8 @@ extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim10;
 extern I2C_HandleTypeDef hi2c2;
+
+TaskDelegate watchdog{};
 
 using namespace std::chrono_literals;
 
@@ -52,6 +55,9 @@ extern "C" void main_cpp()
 {
     static Logger logger{"Logger"};
     LogInfo(MODULE, "System start");
+
+    watchdog.Bind();
+
     static ServoPwmControl leftAileronControl{htim4, TIM_CHANNEL_1, 500us, 2500us};
     static ServoPwmControl rightAileronControl{htim4, TIM_CHANNEL_2, 500us, 2500us};
     static ServoPwmControl leftRuddervatorControl{htim4, TIM_CHANNEL_3, 500us, 2500us};
@@ -227,5 +233,8 @@ extern "C" void main_cpp()
     osdCompositorTask.StartCompositor();
     LogInfo(MODULE, "OSD started");
 
-    vTaskDelete(nullptr);
+    while (true)
+    {
+        watchdog.WaitAndProcess();
+    }
 }
