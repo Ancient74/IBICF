@@ -1,5 +1,6 @@
 #pragma once
 #include "AdcSensor.h"
+#include "FreeRTOSConfig.h"
 #include "TaskThread.h"
 #include "Config.h"
 #include "Log.h"
@@ -15,10 +16,10 @@ struct BatteryInfo
     uint8_t percentLevel;
 };
 
-template<float MaxBatteryVoltage, float MinBatteryVoltage, float AdcInMaxVoltage,
+template<float MaxBatteryVoltage, float MinBatteryVoltage, float AdcRefVoltage, float DividerRatio,
          uint32_t SamplingRateHz = Config::BATTERY_SAMPLING_RATE_HZ>
 class BatterySensorNode
-    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage, SamplingRateHz>, BatteryInfo, 1>
+    : public NodeOutput<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcRefVoltage, DividerRatio, SamplingRateHz>, BatteryInfo, 1>
 {
     static_assert(MaxBatteryVoltage > MinBatteryVoltage,
         "MaxBatteryVoltage must be greater than MinBatteryVoltage");
@@ -33,24 +34,9 @@ public:
         configASSERT(adcConversionRateHz > 0
             && "AdcSensor::GetSamplingRate() returned 0 - check ClockPrescaler config");
 
-        const float maxSamplesF = (static_cast<float>(adcConversionRateHz) / static_cast<float>(SamplingRateHz));
-        const uint32_t maxSamples = static_cast<uint32_t>(maxSamplesF);
-
-        uint32_t ratio = 1;
-        uint32_t extraBits = 0;
-        while (extraBits < Config::BATTERY_MAX_USEFUL_EXTRA_BITS && ratio * 4 <= maxSamples)
-        {
-            ratio *= 4;
-            ++extraBits;
-        }
-
-        configASSERT(ratio >= 4
-            && "SamplingRateHz too high for this ADC's conversion rate: "
-               "not even one extra bit of oversampling fits in the period");
-
-        m_oversampleCount = ratio;
-        m_extraBits = extraBits;
-        m_effectiveMaxCode = (1u << (m_adcSensor.GetAdcResolutionBits() + extraBits)) - 1u;
+        const uint32_t maxSamples = adcConversionRateHz / SamplingRateHz;
+        configASSERT(Config::BATTERY_ADC_OVERSAMPLING_RATIO <= maxSamples && "Oversampling burst doesn't fit in one sampling period");
+        m_fullScale = static_cast<float>(((1u << m_adcSensor.GetAdcResolutionBits()) - 1u) << Config::BATTERY_EXTRA_BITS);
     }
 
     void Start() { m_thread.Start(); }
@@ -59,7 +45,7 @@ public:
     void RunTaskIteration()
     {
         const Status status = m_adcSensor.StartDmaTransactionAndWait(
-            std::span<uint16_t>(m_buffer.data(), m_oversampleCount));
+            std::span<uint16_t>(m_buffer.data(), Config::BATTERY_ADC_OVERSAMPLING_RATIO));
 
         if (status != Status::Ok)
         {
@@ -75,37 +61,26 @@ public:
         m_lastStatus = Status::Ok;
 
         uint32_t sum = 0;
-        for (uint32_t i = 0; i < m_oversampleCount; ++i)
+        for (uint32_t i = 0; i < Config::BATTERY_ADC_OVERSAMPLING_RATIO; ++i)
             sum += m_buffer[i];
 
-        const uint32_t extendedCode = sum >> m_extraBits;
+        const uint32_t extendedReading = sum >> Config::BATTERY_EXTRA_BITS;
 
-        const float adcVoltage =
-            (static_cast<float>(extendedCode) / static_cast<float>(m_effectiveMaxCode))
-            * AdcInMaxVoltage;
-
-        const float batteryVoltage = std::clamp(
-            adcVoltage * (MaxBatteryVoltage / AdcInMaxVoltage),
-            MinBatteryVoltage, MaxBatteryVoltage);
-
-        constexpr float voltageRange = MaxBatteryVoltage - MinBatteryVoltage;
-        const float chargePercentRaw =
-            (batteryVoltage - MinBatteryVoltage) / voltageRange * 100.0f;
-        const float chargePercentClamped = std::clamp(chargePercentRaw, 0.0f, 100.0f);
-        const uint8_t percentLevel = static_cast<uint8_t>(chargePercentClamped + 0.5f);
+        const float pinVoltage = (static_cast<float>(extendedReading) / m_fullScale) * AdcRefVoltage;
+        const float batteryVoltage = pinVoltage * DividerRatio;
+        const float clampedVoltage = std::clamp(batteryVoltage, MinBatteryVoltage, MaxBatteryVoltage);
+        const uint8_t percentLevel = static_cast<uint8_t>(clampedVoltage + 0.5f);
 
         this->Publish({batteryVoltage, percentLevel});
     }
 
 private:
-    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcInMaxVoltage, SamplingRateHz>,
+    TaskThread<BatterySensorNode<MaxBatteryVoltage, MinBatteryVoltage, AdcRefVoltage, DividerRatio, SamplingRateHz>,
         Config::Task::BATTERY_SENSOR_NODE_STACK_SIZE, Config::Task::BATTERY_SENSOR_NODE_PRIORITY,
         pdMS_TO_TICKS(1000 / SamplingRateHz)> m_thread;
     AdcSensor& m_adcSensor;
     Status m_lastStatus{Status::Ok};
     bool m_readingFailed{false};
+    float m_fullScale;
     std::array<uint16_t, Config::BATTERY_ADC_OVERSAMPLING_RATIO> m_buffer{};
-    uint32_t m_oversampleCount = 0;
-    uint32_t m_extraBits = 0;
-    uint32_t m_effectiveMaxCode = 0;
 };

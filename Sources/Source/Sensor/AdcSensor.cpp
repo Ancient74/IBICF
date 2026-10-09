@@ -127,5 +127,18 @@ void AdcSensor::ConversionError()
 
 uint32_t AdcSensor::GetAdcResolutionBits() const
 {
-    return m_handle.Init.Resolution;
+    switch (m_handle.Init.Resolution)
+    {
+    case ADC_RESOLUTION_12B:
+        return 12;
+    case ADC_RESOLUTION_10B:
+        return 10;
+    case ADC_RESOLUTION_8B:
+        return 8;
+    case ADC_RESOLUTION_6B:
+        return 6;
+
+    default:
+        return 12;
+    }
 }

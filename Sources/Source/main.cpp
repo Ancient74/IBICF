@@ -153,7 +153,7 @@ extern "C" void main_cpp()
         LogWarning(MODULE, "BME280 unavailable (status=%d); altitude input disabled", static_cast<int>(bmeStatus));
 
     static AdcSensor adcSensor{hadc1, ADC_CHANNEL_1};
-    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_MAX_VOLTAGE> batterySensor{adcSensor, "BatterySensor"};
+    static BatterySensorNode<Config::BATTERY_MAX_VOLTAGE, Config::BATTERY_MIN_VOLTAGE, Config::BATTERY_ADC_REF_VOLTAGE, Config::BATTERY_ADC_DIVIDER_RATIO> batterySensor{adcSensor, "BatterySensor"};
 
     static OsdResponseReader osdReader{};
     static Uart osdUart{huart2, osdReader, watchdog};
