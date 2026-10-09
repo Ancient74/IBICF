@@ -23,7 +23,7 @@ public:
     static AdcSensor* GetInstance();
 
 private:
-    void ConvertionComplete();
+    void ConversionComplete();
     void ConversionError();
 
     friend void ::HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef*);
