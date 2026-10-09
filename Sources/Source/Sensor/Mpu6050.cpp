@@ -266,7 +266,7 @@ void Mpu6050::Calibrate(Matrix3f& R, Matrix3f& N)
         gy.Add(ga.gyro.y);
         gz.Add(ga.gyro.z);
 
-        HAL_Delay(1);
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
     if (gx.n == 0)

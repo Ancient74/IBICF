@@ -163,7 +163,7 @@ void BME280::Calibrate(Measurements& baseMeasurements)
             res = res + m;
             ++samplesTaken;
         }
-        HAL_Delay(sampleDelayMs);
+        vTaskDelay(pdMS_TO_TICKS(sampleDelayMs));
     }
     if (samplesTaken > 0)
         res = res * (1.0f / samplesTaken);
