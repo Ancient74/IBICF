@@ -753,7 +753,7 @@ class LogViewer(tk.Tk):
         self.mod_list.insert(i, name or "(none)")
         self.mod_list.selection_set(i)      # new modules are visible by default
         self._f_mods.add(name)
-        self._add_card(name)
+        self.stats[name] = ModuleStats(name)
 
     def _ingest(self, batch: list[LogMessage]) -> None:
         now = time.monotonic()
@@ -761,6 +761,8 @@ class LogViewer(tk.Tk):
             self._register_module(m.module)             # also creates the dashboard card
             stats = self.stats[m.module]
             if m.severity == HEARTBEAT:                 # dashboard only: never stored, never logged
+                if m.module not in self.cards:          # a module gets a card with its first beat
+                    self._add_card(m.module)
                 stats.beat_from(m, now)
                 continue
 
@@ -819,7 +821,7 @@ class LogViewer(tk.Tk):
         self.dash_canvas.bind("<Configure>", self._on_dash_resize)
         self.dash_inner.bind("<Configure>",
                              lambda _e: self.dash_canvas.configure(scrollregion=self.dash_canvas.bbox("all")))
-        self._dash_empty = ttk.Label(self.dash_inner, text="Waiting for messages …", style="Status.TLabel")
+        self._dash_empty = ttk.Label(self.dash_inner, text="No heartbeats received yet …", style="Status.TLabel")
         self._dash_empty.grid(row=0, column=0, padx=8, pady=8)
 
     def _on_dash_resize(self, event) -> None:
@@ -828,7 +830,6 @@ class LogViewer(tk.Tk):
 
     def _add_card(self, name: str) -> None:
         self._dash_empty.grid_forget()
-        self.stats[name] = ModuleStats(name)
         self.cards[name] = ModuleCard(self.dash_inner, name, self.ui_font, self._toggle_module_filter)
         self._reflow()
 
