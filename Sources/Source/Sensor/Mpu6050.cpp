@@ -201,12 +201,12 @@ Status Mpu6050::Start()
 
 Status Mpu6050::GetRawValues(GyroscopeAccelerometer& ga)
 {
-    uint8_t data[14];
+    std::array<uint8_t, 14> data{};
 	const auto ret = ReadBytes(MPU6050_ACCEL_XOUT_H, data);
     if (ret != Status::Ok)
         return ret;
-    ValueRegister a[3];
-    ValueRegister g[3];
+    std::array<ValueRegister, 3> a{};
+    std::array<ValueRegister, 3> g{};
 
     for(auto i = 0; i < 3; i++)
     {
