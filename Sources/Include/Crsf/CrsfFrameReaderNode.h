@@ -26,5 +26,5 @@ private:
     TaskThread<CrsfFrameReaderNode, Config::Task::CRSF_FRAME_READER_NODE_STACK_SIZE, Config::Task::CRSF_FRAME_READER_NODE_PRIORITY> m_thread;
     StreamBufferHandle_t m_streamBuffer;
     StaticStreamBuffer_t m_streamBufferBuffer;
-    uint8_t m_buffer[Config::CRSF_READER_BUFFER_SIZE];
+    uint8_t m_buffer[Config::CRSF_READER_BUFFER_SIZE + 1];
 };

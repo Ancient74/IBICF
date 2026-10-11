@@ -100,7 +100,7 @@ private:
 
     StreamBufferHandle_t m_inputStreamBuffer;
     StaticStreamBuffer_t m_inputStreamBufferBuffer;
-    uint8_t m_inputStreamBufferStorage[sizeof(TrampFrame) * 2];
+    uint8_t m_inputStreamBufferStorage[sizeof(TrampFrame) * 2 + 1];
     TrampFrame m_pendingFrame{};
     uint8_t m_parameterIndex = 0;
     uint8_t m_responseIndex = 0;

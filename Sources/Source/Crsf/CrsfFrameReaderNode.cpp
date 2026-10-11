@@ -5,7 +5,7 @@
 CrsfFrameReaderNode::CrsfFrameReaderNode(const char* taskName)
     : m_thread(taskName, *this)
 {
-    m_streamBuffer = xStreamBufferCreateStatic(Config::CRSF_READER_BUFFER_SIZE, 1, m_buffer, &m_streamBufferBuffer);
+    m_streamBuffer = xStreamBufferCreateStatic(sizeof(m_buffer) - 1, 1, m_buffer, &m_streamBufferBuffer);
     configASSERT(m_streamBuffer != nullptr);
 }
 

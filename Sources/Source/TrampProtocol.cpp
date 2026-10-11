@@ -45,7 +45,7 @@ TrampFrameParser::TrampFrameParser(const char* taskName)
     : m_thread(taskName, *this)
 {
     m_inputStreamBuffer = xStreamBufferCreateStatic(
-        sizeof(m_inputStreamBufferStorage), 1, m_inputStreamBufferStorage, &m_inputStreamBufferBuffer);
+        sizeof(m_inputStreamBufferStorage) - 1, 1, m_inputStreamBufferStorage, &m_inputStreamBufferBuffer);
     configASSERT(m_inputStreamBuffer != nullptr);
 }
 

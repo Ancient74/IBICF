@@ -6,7 +6,7 @@
 OsdResponseReader::OsdResponseReader()
 {
     m_streamBuffer = xStreamBufferCreateStatic(
-        Config::OSD_RESPONSE_READER_BUFFER_SIZE + 1, 1, m_streamBufferStorage, &m_streamBufferBuffer);
+        Config::OSD_RESPONSE_READER_BUFFER_SIZE, 1, m_streamBufferStorage, &m_streamBufferBuffer);
     configASSERT(m_streamBuffer != nullptr);
 }
 
