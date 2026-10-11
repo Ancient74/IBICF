@@ -3,6 +3,7 @@
 #include "TaskThread.h"
 #include "Config.h"
 #include "PubSubLib/Node.hpp"
+#include <stream_buffer.h>
 #include <optional>
 #include <span>
 
@@ -97,9 +98,9 @@ private:
     } m_state = TrampFrameParser::State::SyncFrame;
     TaskThread<TrampFrameParser, Config::Task::TRAMP_FRAME_PARSER_STACK_SIZE, Config::Task::TRAMP_FRAME_PARSER_PRIORITY> m_thread;
 
-    QueueHandle_t m_inputQueue;
-    StaticQueue_t m_inputQueueBuffer;
-    uint8_t m_inputQueueStorage[sizeof(TrampFrame) * 2];
+    StreamBufferHandle_t m_inputStreamBuffer;
+    StaticStreamBuffer_t m_inputStreamBufferBuffer;
+    uint8_t m_inputStreamBufferStorage[sizeof(TrampFrame) * 2];
     TrampFrame m_pendingFrame{};
     uint8_t m_parameterIndex = 0;
     uint8_t m_responseIndex = 0;

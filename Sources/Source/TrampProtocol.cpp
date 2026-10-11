@@ -44,25 +44,26 @@ namespace
 TrampFrameParser::TrampFrameParser(const char* taskName)
     : m_thread(taskName, *this)
 {
-    m_inputQueue = xQueueCreateStatic(sizeof(m_inputQueueStorage), sizeof(uint8_t), m_inputQueueStorage, &m_inputQueueBuffer);
-    configASSERT(m_inputQueue != nullptr);
+    m_inputStreamBuffer = xStreamBufferCreateStatic(
+        sizeof(m_inputStreamBufferStorage), 1, m_inputStreamBufferStorage, &m_inputStreamBufferBuffer);
+    configASSERT(m_inputStreamBuffer != nullptr);
 }
 
 TrampFrameParser::~TrampFrameParser()
 {
     Stop();
-    vQueueDelete(m_inputQueue);
+    vStreamBufferDelete(m_inputStreamBuffer);
 }
 
 void TrampFrameParser::Process(uint8_t byte)
 {
-    xQueueSend(m_inputQueue, &byte, 0);
+    xStreamBufferSend(m_inputStreamBuffer, &byte, sizeof(byte), 0);
 }
 
 void TrampFrameParser::RunTaskIteration()
 {
     uint8_t byte;
-    if (xQueueReceive(m_inputQueue, &byte, Config::TRAMP_PROTOCOL_POLLING_RATE_MS) != pdTRUE)
+    if (xStreamBufferReceive(m_inputStreamBuffer, &byte, sizeof(byte), Config::TRAMP_PROTOCOL_POLLING_RATE_MS) == 0)
         return;
 
     switch (m_state)
