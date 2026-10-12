@@ -1,13 +1,23 @@
 #include "OsdController.h"
+#include "Log.h"
 #include <algorithm>
+
+namespace
+{
+    constexpr const char* MODULE = "OSD_CONTROLLER";
+}
 
 OsdController::OsdController(OsdModule& module)
     : m_module(module)
 {
     m_module.ClearScreen();
-    auto status = m_module.GetInputSignalStatus();
+    const auto status = m_module.GetInputSignalStatus();
     if (!status)
+    {
+        LogWarning(MODULE, "GetInputSignalStatus return value is empty");
         return;
+    }
+    LogInfo(MODULE, "GetInputSignalStatus return value: %d", static_cast<uint8_t>(*status));
     m_rows = status == InputSignalStatus::Ntsc ? 11 : 15;
 
     m_module.ConfigureOutput(OutputMode::TextAndVideo, status == InputSignalStatus::Ntsc ? VideoStandard::Ntsc : VideoStandard::Pal, false, false);
