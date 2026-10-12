@@ -27,6 +27,9 @@ namespace Config
 
     constexpr uint16_t SW_UART_BUFFER_SIZE = 256;
     constexpr uint16_t SW_UART_CHUNK_SIZE = 16;
+    constexpr uint16_t SW_UART_BYTE_SIZE = 10; // 8N1
+    constexpr uint32_t SW_UART_TIMEOUT_MS = 200;
+
     constexpr uint16_t CRSF_READER_BUFFER_SIZE = 256;
     constexpr uint16_t CRSF_READER_CHUNK_SIZE = 32;
     constexpr uint16_t SENSOR_FUSION_NODE_QUEUE_SIZE = 16;
@@ -38,7 +41,6 @@ namespace Config
 
     constexpr uint8_t OSD_REFRESH_RATE_HZ = 20;
 
-    constexpr uint32_t SOFTWARE_UART_READ_TIMEOUT_MS = 200;
     constexpr uint32_t CRSF_READER_TIMEOUT_MS = 200;
 
     constexpr uint32_t TRAMP_PROTOCOL_POLLING_RATE_MS = 200;

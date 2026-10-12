@@ -77,6 +77,11 @@ public:
         m_state.store(State::Stopped, std::memory_order_release);
     }
 
+    TaskHandle_t GetTaskHandle()
+    {
+        return m_task;
+    }
+
 private:
     enum class State : uint8_t
     {

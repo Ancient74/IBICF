@@ -39,8 +39,9 @@ extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim3;
-extern TIM_HandleTypeDef htim10;
+extern TIM_HandleTypeDef htim1;
 extern I2C_HandleTypeDef hi2c2;
+extern DMA_HandleTypeDef hdma_tim1_up;
 
 TaskDelegate watchdog{};
 
@@ -188,14 +189,15 @@ extern "C" void main_cpp()
     Connect(fusion, osdHorizonNode);
     Connect(batterySensor, osdBatteryInfoNode);
 
-    static HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim10};
+    static HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim1, hdma_tim1_up};
     static TrampFrameParser trampParser{"TrampFrameParser"};
     static TrampProtocolController trampProtocolController{"TrampProtocol"};
     Connect(swUart, trampParser);
     Connect(trampProtocolController, swUart);
+    Connect(trampParser, trampProtocolController);
+    swUart.Start();
     trampParser.Start();
     trampProtocolController.Start();
-    swUart.Start();
     LogInfo(MODULE, "VTX communication started");
 
     static OsdVtxInfo osdVtxNode{osdController, trampProtocolController};

@@ -39,7 +39,8 @@ extern "C" {
 void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-void ConfigureOpenDrain();
+void ConfigureOpenDrain(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+void ConfigureExtiInput(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

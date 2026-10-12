@@ -62,14 +62,23 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
-void ConfigureOpenDrain()
+void ConfigureOpenDrain(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
 {
+  HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_SET);
   GPIO_InitTypeDef openDrainInit = {0};
-  openDrainInit.Pin = TRAMP_Pin;
+  openDrainInit.Pin = GPIO_Pin;
   openDrainInit.Mode = GPIO_MODE_OUTPUT_OD;
   openDrainInit.Pull = GPIO_PULLUP;
   openDrainInit.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(TRAMP_GPIO_Port, &openDrainInit);
-  HAL_GPIO_WritePin(TRAMP_GPIO_Port, TRAMP_Pin, GPIO_PIN_SET);
+  HAL_GPIO_Init(GPIOx, &openDrainInit);
+}
+
+void ConfigureExtiInput(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
+{
+  GPIO_InitTypeDef extiInit = {0};
+  extiInit.Pin = GPIO_Pin;
+  extiInit.Mode = GPIO_MODE_IT_FALLING;
+  extiInit.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOx, &extiInit);
 }
 /* USER CODE END 2 */
