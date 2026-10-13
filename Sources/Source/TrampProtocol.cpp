@@ -8,7 +8,7 @@ namespace
 {
     uint8_t TrampChecksum(const TrampFrame& frame)
     {
-        uint8_t sum = frame.command + frame.parameter.low + frame.parameter.high;
+        uint8_t sum = frame.command;
         for (uint8_t i = 0; i < frame.response.size(); i++)
             sum += frame.response[i];
 
@@ -16,7 +16,7 @@ namespace
     }
 
     template <typename T>
-    T ExtractPayload(const std::array<uint8_t, 10>& payload)
+    T ExtractPayload(const std::array<uint8_t, 12>& payload)
     {
         static_assert(sizeof(T) == payload.size());
         T value;
@@ -85,12 +85,12 @@ void TrampFrameParser::RunTaskIteration()
         if (m_parameterIndex == 0)
         {
             m_parameterIndex++;
-            m_pendingFrame.parameter.low = byte;
+            m_pendingFrame.SetParameterValueLow(byte);
         }
         else if(m_parameterIndex == 1)
         {
             m_parameterIndex = 0;
-            m_pendingFrame.parameter.high = byte;
+            m_pendingFrame.SetParameterValueHigh(byte);
             m_state = State::Response;
         }
         break;
@@ -115,8 +115,7 @@ void TrampFrameParser::RunTaskIteration()
         if (byte == m_pendingFrame.footer)
             Publish(m_pendingFrame);
         m_pendingFrame.command = 0;
-        m_pendingFrame.parameter.high = 0;
-        m_pendingFrame.parameter.low = 0;
+        m_pendingFrame.SetParameterValue(0);
         m_pendingFrame.response.fill(0);
         m_pendingFrame.checksum = 0;
         m_state = State::SyncFrame;
@@ -219,7 +218,7 @@ void TrampProtocolController::Process(const TrampFrame& frame)
         LogWarning(MODULE, "RX unsupported command %s (0x%02X), parameter=%u",
             TrampCommandName(static_cast<TrampCommand>(frame.command)),
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.GetValue()));
+            static_cast<unsigned>(frame.GetParameterValue()));
         break;
     }
 }
@@ -410,7 +409,7 @@ void TrampProtocolController::SendParam(TrampCommand command, uint16_t param)
         return;
     TrampFrame frame{};
     frame.command = static_cast<uint8_t>(command);
-    frame.parameter.SetValue(param);
+    frame.SetParameterValue(param);
     frame.checksum = TrampChecksum(frame);
     SendCommand(frame);
 }
@@ -431,26 +430,26 @@ void TrampProtocolController::SendCommand(const TrampFrame& frame)
     case TrampCommand::SetFrequency:
         LogInfo(MODULE, "TX SetFrequency (0x%02X): %u MHz, checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.GetValue()),
+            static_cast<unsigned>(frame.GetParameterValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     case TrampCommand::SetPower:
         LogInfo(MODULE, "TX SetPower (0x%02X): %u mW, checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.GetValue()),
+            static_cast<unsigned>(frame.GetParameterValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     case TrampCommand::SetPitMode:
         LogInfo(MODULE, "TX SetPitMode (0x%02X): %s (parameter=%u), checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            frame.parameter.GetValue() == 0 ? "on" : "off",
-            static_cast<unsigned>(frame.parameter.GetValue()),
+            frame.GetParameterValue() == 0 ? "on" : "off",
+            static_cast<unsigned>(frame.GetParameterValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     default:
         LogWarning(MODULE, "TX unknown command (0x%02X), parameter=%u, checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.GetValue()),
+            static_cast<unsigned>(frame.GetParameterValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     }

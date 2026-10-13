@@ -20,25 +20,30 @@ enum class TrampCommand
 #pragma pack(push, 1)
 struct TrampFrame
 {
+    uint16_t GetParameterValue() const
+    {
+        return static_cast<uint16_t>(response[0]) | (static_cast<uint16_t>(response[1]) << 8);
+    }
+
+    void SetParameterValue(uint16_t value)
+    {
+        SetParameterValueLow(static_cast<uint8_t>(value));
+        SetParameterValueHigh(static_cast<uint8_t>(value >> 8));
+    }
+
+    void SetParameterValueLow(uint8_t low)
+    {
+        response[0] = static_cast<uint8_t>(low);
+    }
+
+    void SetParameterValueHigh(uint8_t high)
+    {
+        response[1] = static_cast<uint8_t>(high);
+    }
+
     const uint8_t sync = 0x0F;
     uint8_t command;
-    struct Parameter
-    {
-        uint16_t GetValue() const
-        {
-            return static_cast<uint16_t>(low) | (static_cast<uint16_t>(high) << 8);
-        }
-
-        void SetValue(uint16_t value)
-        {
-            low = static_cast<uint8_t>(value);
-            high = static_cast<uint8_t>(value >> 8);
-        }
-
-        uint8_t low;
-        uint8_t high;
-    } parameter;
-    std::array<uint8_t, 10> response;
+    std::array<uint8_t, 12> response;
     uint8_t checksum;
     const uint8_t footer = 0x00;
 };
@@ -49,9 +54,9 @@ struct TrampCapabilities
     uint16_t minFreqMHz;
     uint16_t maxFreqMHz;
     uint16_t maxPowerMw;
-    uint8_t  reserved[4];
+    uint8_t  reserved[6];
 };
-static_assert(sizeof(TrampCapabilities) == 10);
+static_assert(sizeof(TrampCapabilities) == 12);
 
 struct TrampStatus
 {
@@ -60,19 +65,19 @@ struct TrampStatus
     uint8_t  controlMode;   // bit0 = race-lock
     uint8_t  pitMode;
     uint16_t actualPowerMw;
-    uint8_t  reserved[2];
+    uint8_t  reserved[4];
 
     bool IsRaceLocked() const { return controlMode & 0x01; }
 };
-static_assert(sizeof(TrampStatus) == 10);
+static_assert(sizeof(TrampStatus) == 12);
 
 struct TrampTemperature
 {
     uint8_t  reserved0[4];
     int16_t  tempCelsius;
-    uint8_t  reserved1[4];
+    uint8_t  reserved1[6];
 };
-static_assert(sizeof(TrampTemperature) == 10);
+static_assert(sizeof(TrampTemperature) == 12);
 #pragma pack(pop)
 
 class TrampFrameParser
