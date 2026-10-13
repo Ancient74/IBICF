@@ -45,7 +45,7 @@ TrampFrameParser::TrampFrameParser(const char* taskName)
     : m_thread(taskName, *this)
 {
     m_inputStreamBuffer = xStreamBufferCreateStatic(
-        sizeof(m_inputStreamBufferStorage) - 1, 1, m_inputStreamBufferStorage, &m_inputStreamBufferBuffer);
+        sizeof(m_inputStreamBufferStorage) - 1, sizeof(TrampFrame), m_inputStreamBufferStorage, &m_inputStreamBufferBuffer);
     configASSERT(m_inputStreamBuffer != nullptr);
 }
 
@@ -62,65 +62,68 @@ void TrampFrameParser::Process(uint8_t byte)
 
 void TrampFrameParser::RunTaskIteration()
 {
-    uint8_t byte;
-    if (xStreamBufferReceive(m_inputStreamBuffer, &byte, sizeof(byte), Config::TRAMP_PROTOCOL_POLLING_RATE_MS) == 0)
+    std::array<uint8_t, sizeof(TrampFrame)> bytes;
+    if (xStreamBufferReceive(m_inputStreamBuffer, bytes.data(), bytes.size(), Config::TRAMP_PROTOCOL_POLLING_RATE_MS) == 0)
         return;
 
-    switch (m_state)
+    for (const auto byte : bytes)
     {
-    case State::SyncFrame:
-        if (byte == m_pendingFrame.sync)
-            m_state = State::Command;
-        break;
-    case State::Command:
-        if (byte != static_cast<uint8_t>(TrampCommand::Capabilities) && byte != static_cast<uint8_t>(TrampCommand::Status) && byte != static_cast<uint8_t>(TrampCommand::Temperature))
+        switch (m_state)
+        {
+        case State::SyncFrame:
+            if (byte == m_pendingFrame.sync)
+                m_state = State::Command;
+            break;
+        case State::Command:
+            if (byte != static_cast<uint8_t>(TrampCommand::Capabilities) && byte != static_cast<uint8_t>(TrampCommand::Status) && byte != static_cast<uint8_t>(TrampCommand::Temperature))
+                m_state = State::SyncFrame;
+            else
+            {
+                m_pendingFrame.command = byte;
+                m_state = State::Parameter;
+            }
+            break;
+        case State::Parameter:
+            if (m_parameterIndex == 0)
+            {
+                m_parameterIndex++;
+                m_pendingFrame.SetParameterValueLow(byte);
+            }
+            else if(m_parameterIndex == 1)
+            {
+                m_parameterIndex = 0;
+                m_pendingFrame.SetParameterValueHigh(byte);
+                m_state = State::Response;
+            }
+            break;
+        case State::Response:
+            m_pendingFrame.response[m_responseIndex++] = byte;
+            if (m_responseIndex == m_pendingFrame.response.size())
+            {
+                m_state = State::Checksum;
+                m_responseIndex = 2;
+            }
+            break;
+        case State::Checksum:
+            if (TrampChecksum(m_pendingFrame) == byte)
+            {
+                m_pendingFrame.checksum = byte;
+                m_state = State::Footer;
+            }
+            else
+                m_state = State::SyncFrame;
+            break;
+        case State::Footer:
+            if (byte == m_pendingFrame.footer)
+                Publish(m_pendingFrame);
+            m_pendingFrame.command = 0;
+            m_pendingFrame.SetParameterValue(0);
+            m_pendingFrame.response.fill(0);
+            m_pendingFrame.checksum = 0;
             m_state = State::SyncFrame;
-        else
-        {
-            m_pendingFrame.command = byte;
-            m_state = State::Parameter;
+        default:
+            break;
         }
-        break;
-    case State::Parameter:
-        if (m_parameterIndex == 0)
-        {
-            m_parameterIndex++;
-            m_pendingFrame.SetParameterValueLow(byte);
-        }
-        else if(m_parameterIndex == 1)
-        {
-            m_parameterIndex = 0;
-            m_pendingFrame.SetParameterValueHigh(byte);
-            m_state = State::Response;
-        }
-        break;
-    case State::Response:
-        m_pendingFrame.response[m_responseIndex++] = byte;
-        if (m_responseIndex == m_pendingFrame.response.size())
-        {
-            m_state = State::Checksum;
-            m_responseIndex = 0;
-        }
-        break;
-    case State::Checksum:
-        if (TrampChecksum(m_pendingFrame) == byte)
-        {
-            m_pendingFrame.checksum = byte;
-            m_state = State::Footer;
-        }
-        else
-            m_state = State::SyncFrame;
-        break;
-    case State::Footer:
-        if (byte == m_pendingFrame.footer)
-            Publish(m_pendingFrame);
-        m_pendingFrame.command = 0;
-        m_pendingFrame.SetParameterValue(0);
-        m_pendingFrame.response.fill(0);
-        m_pendingFrame.checksum = 0;
-        m_state = State::SyncFrame;
-    default:
-        break;
     }
 }
 
