@@ -8,7 +8,6 @@
 #include "stream_buffer.h"
 #include "Uart.h"
 #include "optional"
-#include <vector>
 
 // ---- 0xA0 - Configure UART ----
 struct ConfigureUartRawCommand
@@ -287,8 +286,6 @@ public:
     void Delay(uint8_t delayMs);
 
 private:
-    void WriteCommand(uint8_t commandId, std::span<const uint8_t> argument);
-
     IWriter& m_writer;
     IOsdResponseReader& m_reader;
 };

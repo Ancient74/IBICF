@@ -1,5 +1,6 @@
 #pragma once
 #include "OsdModule.h"
+#include <vector>
 
 struct OsdCell
 {
