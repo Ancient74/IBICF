@@ -31,8 +31,15 @@ uint8_t OsdController::Rows() const
 
 void OsdController::DrawCells(std::span<const OsdCell> cells)
 {
-    for (const auto& prev : m_lastCells)
+    if (cells.size() > m_lastCells.size())
     {
+        LogWarning(MODULE, "DrawCells received too many cells: %u", static_cast<unsigned>(cells.size()));
+        return;
+    }
+
+    for (size_t i = 0; i < m_lastCellCount; ++i)
+    {
+        const auto& prev = m_lastCells[i];
         const bool stillUsed = std::any_of(cells.begin(), cells.end(),
             [&](const auto& c) { return c.row == prev.row && c.col == prev.col; });
         if (!stillUsed)
@@ -41,5 +48,6 @@ void OsdController::DrawCells(std::span<const OsdCell> cells)
     for (const auto& c : cells)
         m_module.DisplayCharacter(c.row, c.col, c.charCode);
 
-    m_lastCells.assign(cells.begin(), cells.end());
+    std::copy(cells.begin(), cells.end(), m_lastCells.begin());
+    m_lastCellCount = cells.size();
 }

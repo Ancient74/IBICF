@@ -1,6 +1,7 @@
 #pragma once
 #include "OsdModule.h"
-#include <vector>
+#include <array>
+#include <cstddef>
 
 struct OsdCell
 {
@@ -20,7 +21,9 @@ public:
     void DrawCells(std::span<const OsdCell> cells);
 
 private:
-    std::vector<OsdCell> m_lastCells;
+    static constexpr size_t s_maxCellCount = 16 * Config::OSD_COLS;
+    std::array<OsdCell, s_maxCellCount> m_lastCells{};
+    size_t m_lastCellCount = 0;
     OsdModule& m_module;
     uint8_t m_rows;
     static constexpr uint8_t s_cols = Config::OSD_COLS;
