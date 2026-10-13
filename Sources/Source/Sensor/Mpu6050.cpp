@@ -160,6 +160,8 @@ Status Mpu6050::Start()
             break;
         vTaskDelay(1);
     }
+    vTaskDelay(pdMS_TO_TICKS(100));
+
 
     powerManagement = {};
     powerManagement.bits.tempDisable = 1;
