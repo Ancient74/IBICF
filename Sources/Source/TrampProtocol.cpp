@@ -8,7 +8,7 @@ namespace
 {
     uint8_t TrampChecksum(const TrampFrame& frame)
     {
-        uint8_t sum = frame.command + frame.parameter.value;
+        uint8_t sum = frame.command + frame.parameter.low + frame.parameter.high;
         for (uint8_t i = 0; i < frame.response.size(); i++)
             sum += frame.response[i];
 
@@ -115,7 +115,8 @@ void TrampFrameParser::RunTaskIteration()
         if (byte == m_pendingFrame.footer)
             Publish(m_pendingFrame);
         m_pendingFrame.command = 0;
-        m_pendingFrame.parameter.value = 0;
+        m_pendingFrame.parameter.high = 0;
+        m_pendingFrame.parameter.low = 0;
         m_pendingFrame.response.fill(0);
         m_pendingFrame.checksum = 0;
         m_state = State::SyncFrame;
@@ -218,7 +219,7 @@ void TrampProtocolController::Process(const TrampFrame& frame)
         LogWarning(MODULE, "RX unsupported command %s (0x%02X), parameter=%u",
             TrampCommandName(static_cast<TrampCommand>(frame.command)),
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.value));
+            static_cast<unsigned>(frame.parameter.GetValue()));
         break;
     }
 }
@@ -409,7 +410,7 @@ void TrampProtocolController::SendParam(TrampCommand command, uint16_t param)
         return;
     TrampFrame frame{};
     frame.command = static_cast<uint8_t>(command);
-    frame.parameter.value = param;
+    frame.parameter.SetValue(param);
     frame.checksum = TrampChecksum(frame);
     SendCommand(frame);
 }
@@ -430,26 +431,26 @@ void TrampProtocolController::SendCommand(const TrampFrame& frame)
     case TrampCommand::SetFrequency:
         LogInfo(MODULE, "TX SetFrequency (0x%02X): %u MHz, checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.parameter.GetValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     case TrampCommand::SetPower:
         LogInfo(MODULE, "TX SetPower (0x%02X): %u mW, checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.parameter.GetValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     case TrampCommand::SetPitMode:
         LogInfo(MODULE, "TX SetPitMode (0x%02X): %s (parameter=%u), checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            frame.parameter.value == 0 ? "on" : "off",
-            static_cast<unsigned>(frame.parameter.value),
+            frame.parameter.GetValue() == 0 ? "on" : "off",
+            static_cast<unsigned>(frame.parameter.GetValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     default:
         LogWarning(MODULE, "TX unknown command (0x%02X), parameter=%u, checksum=0x%02X",
             static_cast<unsigned>(frame.command),
-            static_cast<unsigned>(frame.parameter.value),
+            static_cast<unsigned>(frame.parameter.GetValue()),
             static_cast<unsigned>(frame.checksum));
         break;
     }

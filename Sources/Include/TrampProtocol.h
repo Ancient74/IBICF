@@ -24,16 +24,19 @@ struct TrampFrame
     uint8_t command;
     struct Parameter
     {
-        union
+        uint16_t GetValue() const
         {
-            uint16_t value;
+            return static_cast<uint16_t>(low) | (static_cast<uint16_t>(high) << 8);
+        }
 
-            struct
-            {
-                uint8_t low;
-                uint8_t high;
-            };
-        };
+        void SetValue(uint16_t value)
+        {
+            low = static_cast<uint8_t>(value);
+            high = static_cast<uint8_t>(value >> 8);
+        }
+
+        uint8_t low;
+        uint8_t high;
     } parameter;
     std::array<uint8_t, 10> response;
     uint8_t checksum;
