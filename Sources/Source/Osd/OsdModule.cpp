@@ -1,10 +1,15 @@
 #include "OsdModule.h"
+#include "Config.h"
+#include "Log.h"
+#include "task.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
 
 namespace
 {
+    constexpr const char* MODULE = "OSD";
+
 #pragma pack(push, 1)
     template <uint8_t Id, typename Payload>
     struct CommandPacket
@@ -31,6 +36,50 @@ namespace
         std::copy(payload.begin(), payload.end(), command.begin() + 1);
         writer.Write(std::span<const uint8_t>(command.data(), payload.size() + 1));
     }
+
+    bool ReadCommandResponse(IOsdResponseReader& reader, uint8_t commandId,
+                             std::array<uint8_t, 2>& response, uint32_t timeoutMs)
+    {
+        const uint32_t startTime = HAL_GetTick();
+        while (true)
+        {
+            const uint32_t elapsedMs = HAL_GetTick() - startTime;
+            if (elapsedMs > timeoutMs)
+                break;
+
+            if (!reader.ReadBytes(response, timeoutMs - elapsedMs))
+                break;
+            if (response[0] == commandId)
+                return true;
+        }
+
+        LogWarning(MODULE, "Timed out waiting for response to command 0x%02X", commandId);
+        return false;
+    }
+
+    template <uint8_t Id, typename Payload>
+    bool WriteCommandAndReadResponse(IWriter& writer, IOsdResponseReader& reader,
+                                     const Payload& payload, std::array<uint8_t, 2>* response = nullptr, uint32_t timeoutMs = Config::OSD_COMMAND_RESPONSE_TIMEOUT_MS)
+    {
+        WriteCommand<Id>(writer, payload);
+        std::array<uint8_t, 2> receivedResponse{};
+        const bool received = ReadCommandResponse(reader, Id, receivedResponse, timeoutMs);
+        if (received && response != nullptr)
+            *response = receivedResponse;
+        return received;
+    }
+
+    template <uint8_t Id>
+    bool WriteCommandAndReadResponse(IWriter& writer, IOsdResponseReader& reader,
+                                     std::span<const uint8_t> payload, std::array<uint8_t, 2>* response = nullptr, uint32_t timeoutMs = Config::OSD_COMMAND_RESPONSE_TIMEOUT_MS)
+    {
+        WriteCommand<Id>(writer, payload);
+        std::array<uint8_t, 2> receivedResponse{};
+        const bool received = ReadCommandResponse(reader, Id, receivedResponse, timeoutMs);
+        if (received && response != nullptr)
+            *response = receivedResponse;
+        return received;
+    }
 }
 
 OsdResponseReader::OsdResponseReader()
@@ -55,13 +104,18 @@ void OsdResponseReader::OnChunk(std::span<const uint8_t> chunk)
 bool OsdResponseReader::ReadBytes(std::span<uint8_t> buffer, uint32_t timeoutMs)
 {
     size_t bytesRead = 0;
+    const TickType_t startTime = xTaskGetTickCount();
+    const TickType_t timeoutTicks = pdMS_TO_TICKS(timeoutMs);
     while (bytesRead < buffer.size())
     {
+        const TickType_t elapsedTicks = xTaskGetTickCount() - startTime;
+        const TickType_t remainingTicks =
+            elapsedTicks < timeoutTicks ? timeoutTicks - elapsedTicks : 0;
         const size_t received = xStreamBufferReceive(
             m_streamBuffer,
             buffer.data() + bytesRead,
             buffer.size() - bytesRead,
-            pdMS_TO_TICKS(timeoutMs));
+            remainingTicks);
         if (received == 0)
             return false;
         bytesRead += received;
@@ -82,7 +136,7 @@ void OsdModule::ConfigureUart(uint32_t baudRate, StopBits stopBits, ParityBit pa
     command.bitOrdering = isMsbFirst ? 1 : 0;
     command.parityBit = static_cast<uint32_t>(parityBit);
     command.stopBits = static_cast<uint32_t>(stopBits);
-    WriteCommand<0xA0>(m_writer, command);
+    WriteCommandAndReadResponse<0xA0>(m_writer, m_reader, command);
 }
 
 void OsdModule::ConfigureOutput(OutputMode outputMode, VideoStandard videoStandard, bool isVSyncEnabled, bool isAutoBlackLevelEnabled)
@@ -92,7 +146,7 @@ void OsdModule::ConfigureOutput(OutputMode outputMode, VideoStandard videoStanda
     command.videoStandard = static_cast<uint8_t>(videoStandard);
     command.vSync = isVSyncEnabled ? 1 : 0;
     command.autoBlackLevel = isAutoBlackLevelEnabled ? 1 : 0;
-    WriteCommand<0xA1>(m_writer, command);
+    WriteCommandAndReadResponse<0xA1>(m_writer, m_reader, command);
 }
 
 void OsdModule::ConfigureLineFormatting(uint8_t tabSizeInCharacters, WrapMethod wrapMethod, NewLineBehaviour newLineBehaviour)
@@ -103,7 +157,7 @@ void OsdModule::ConfigureLineFormatting(uint8_t tabSizeInCharacters, WrapMethod 
     command.tabSize = static_cast<uint8_t>(std::clamp<uint8_t>(tabSizeInCharacters, 1, 16) - 1);
     command.wrapMethod = static_cast<uint8_t>(wrapMethod);
     command.newLineBehaviour = static_cast<uint8_t>(newLineBehaviour);
-    WriteCommand<0xA2>(m_writer, command);
+    WriteCommandAndReadResponse<0xA2>(m_writer, m_reader, command);
 }
 
 void OsdModule::ConfigureCharacterDisplay(CharacterBackground background, bool isInverted, bool isBlinking)
@@ -112,7 +166,7 @@ void OsdModule::ConfigureCharacterDisplay(CharacterBackground background, bool i
     command.background = static_cast<uint8_t>(background);
     command.invert = isInverted ? 1 : 0;
     command.blink = isBlinking ? 1 : 0;
-    WriteCommand<0xA3>(m_writer, command);
+    WriteCommandAndReadResponse<0xA3>(m_writer, m_reader, command);
 }
 
 void OsdModule::DisplayCharacter(uint8_t row, uint8_t column, uint8_t characterCode)
@@ -120,7 +174,7 @@ void OsdModule::DisplayCharacter(uint8_t row, uint8_t column, uint8_t characterC
     // row: 0-11 (NTSC) / 0-15 (PAL); column: 0-29. Range depends on the currently
     // configured video standard, so it isn't asserted here.
     const std::array<uint8_t, 3> argument{row, column, characterCode};
-    WriteCommand<0xA4>(m_writer, argument);
+    WriteCommandAndReadResponse<0xA4>(m_writer, m_reader, argument);
 }
 
 void OsdModule::DisplayLine(uint8_t row, uint8_t column, std::string_view text)
@@ -133,7 +187,7 @@ void OsdModule::DisplayLine(uint8_t row, uint8_t column, std::string_view text)
     std::copy(text.begin(), text.end(), argument.begin() + 2);
     argument[2 + text.size()] = 0x00; // terminating byte required by the protocol
 
-    WriteCommand<0xA5>(m_writer, std::span<const uint8_t>(argument.data(), 2 + text.size() + 1));
+    WriteCommandAndReadResponse<0xA5>(m_writer, m_reader, std::span<const uint8_t>(argument.data(), 2 + text.size() + 1));
 }
 
 void OsdModule::DisplayUnformattedLine(uint8_t row, uint8_t column, std::string_view text)
@@ -146,13 +200,13 @@ void OsdModule::DisplayUnformattedLine(uint8_t row, uint8_t column, std::string_
     std::copy(text.begin(), text.end(), argument.begin() + 2);
     argument[2 + text.size()] = 0x00;
 
-    WriteCommand<0xA6>(m_writer, std::span<const uint8_t>(argument.data(), 2 + text.size() + 1));
+    WriteCommandAndReadResponse<0xA6>(m_writer, m_reader, std::span<const uint8_t>(argument.data(), 2 + text.size() + 1));
 }
 
 void OsdModule::ClearScreen()
 {
     constexpr uint8_t confirmationByte = 0xA7;
-    WriteCommand<0xA7>(m_writer, confirmationByte);
+    WriteCommandAndReadResponse<0xA7>(m_writer, m_reader, confirmationByte);
 }
 
 void OsdModule::SetOffset(int8_t verticalOffsetPx, int8_t horizontalOffsetPx)
@@ -163,7 +217,7 @@ void OsdModule::SetOffset(int8_t verticalOffsetPx, int8_t horizontalOffsetPx)
     const std::array<uint8_t, 2> argument{
         static_cast<uint8_t>(verticalOffsetPx),
         static_cast<uint8_t>(horizontalOffsetPx)};
-    WriteCommand<0xA8>(m_writer, argument);
+    WriteCommandAndReadResponse<0xA8>(m_writer, m_reader, argument);
 }
 
 void OsdModule::SetRowBrightness(uint8_t row, BlackLevel blackLevel, WhiteLevel whiteLevel)
@@ -172,7 +226,7 @@ void OsdModule::SetRowBrightness(uint8_t row, BlackLevel blackLevel, WhiteLevel 
     command.row = row;
     command.blackLevel = static_cast<uint8_t>(blackLevel);
     command.whiteLevel = static_cast<uint8_t>(whiteLevel);
-    WriteCommand<0xA9>(m_writer, command);
+    WriteCommandAndReadResponse<0xA9>(m_writer, m_reader, command);
 }
 
 void OsdModule::ConfigureGlobalDisplayParams(uint8_t sharpness, BackgroundBrightness backgroundBrightness,
@@ -188,7 +242,7 @@ void OsdModule::ConfigureGlobalDisplayParams(uint8_t sharpness, BackgroundBright
     const std::array<uint8_t, 2> argument{
         std::clamp<uint8_t>(sharpness, 0, 35),
         *reinterpret_cast<uint8_t*>(&secondByte)};
-    WriteCommand<0xAA>(m_writer, argument);
+    WriteCommandAndReadResponse<0xAA>(m_writer, m_reader, argument);
 }
 
 void OsdModule::OverwriteCharacterImage(uint8_t characterCode, const CharacterBitmap& bitmap)
@@ -217,7 +271,7 @@ void OsdModule::OverwriteCharacterImage(uint8_t characterCode, const CharacterBi
         }
     }
 
-    WriteCommand<0xAC>(m_writer, argument);
+    WriteCommandAndReadResponse<0xAC>(m_writer, m_reader, argument);
 }
 
 void OsdModule::RestoreDefaultSettings(bool restoreOutputParams, bool restoreUartParams, bool restoreFont, bool restoreInitSequence)
@@ -227,10 +281,10 @@ void OsdModule::RestoreDefaultSettings(bool restoreOutputParams, bool restoreUar
     command.restoreUartParams = restoreUartParams ? 1 : 0;
     command.restoreFont = restoreFont ? 1 : 0;
     command.restoreInitSequence = restoreInitSequence ? 1 : 0;
-    WriteCommand<0xAD>(m_writer, command);
+    WriteCommandAndReadResponse<0xAD>(m_writer, m_reader, command);
 }
 
-std::optional<uint8_t> OsdModule::SaveCommandSequence(std::span<const uint8_t> commandSequence, uint32_t timeoutMs)
+std::optional<uint8_t> OsdModule::SaveCommandSequence(std::span<const uint8_t> commandSequence)
 {
     assert(commandSequence.size() + 1 <= Config::OSD_MODULE_COMMAND_SEQUENCE_SIZE);
 
@@ -238,49 +292,45 @@ std::optional<uint8_t> OsdModule::SaveCommandSequence(std::span<const uint8_t> c
     std::copy(commandSequence.begin(), commandSequence.end(), argument.begin());
     argument[commandSequence.size()] = 0x00;
 
-    WriteCommand<0xAE>(m_writer, std::span<const uint8_t>(argument.data(), commandSequence.size() + 1));
-
-    uint8_t response = 0;
-    if (!m_reader.ReadBytes({&response, 1}, timeoutMs))
+    std::array<uint8_t, 2> response{};
+    if (!WriteCommandAndReadResponse<0xAE>(m_writer, m_reader, std::span<const uint8_t>(argument.data(), commandSequence.size() + 1), &response))
         return std::nullopt;
-    return response;
+
+    return response[1];
 }
 
 void OsdModule::ExecuteCommandSequence(uint8_t sequenceNumber)
 {
-    WriteCommand<0xAF>(m_writer, sequenceNumber);
+    WriteCommandAndReadResponse<0xAF>(m_writer, m_reader, sequenceNumber);
 }
 
 void OsdModule::DeleteCommandSequence(uint8_t sequenceNumber)
 {
-    WriteCommand<0xB0>(m_writer, sequenceNumber);
+    WriteCommandAndReadResponse<0xB0>(m_writer, m_reader, sequenceNumber);
 }
 
 void OsdModule::ClearCommandBuffer()
 {
     constexpr uint8_t confirmationByte = 0xB1;
-    WriteCommand<0xB1>(m_writer, confirmationByte);
+    WriteCommandAndReadResponse<0xB1>(m_writer, m_reader, confirmationByte);
 }
 
 void OsdModule::Delay(uint8_t delayMs)
 {
-    WriteCommand<0xB2>(m_writer, delayMs);
+    WriteCommandAndReadResponse<0xB2>(m_writer, m_reader, delayMs);
 }
 
-std::optional<InputSignalStatus> OsdModule::GetInputSignalStatus(uint32_t timeoutMs)
+std::optional<InputSignalStatus> OsdModule::GetInputSignalStatus()
 {
-    WriteCommand<0xAB>(m_writer, std::array<uint8_t, 0>{});
-
-    uint8_t status = 0;
-    if (!m_reader.ReadBytes({&status, 1}, timeoutMs))
+    std::array<uint8_t, 2> response{};
+    if (!WriteCommandAndReadResponse<0xAB>(m_writer, m_reader, std::array<uint8_t, 0>{}, &response))
         return std::nullopt;
-
-    switch (static_cast<InputSignalStatus>(status))
+    switch (static_cast<InputSignalStatus>(response[1]))
     {
         case InputSignalStatus::NoSignal:
         case InputSignalStatus::Pal:
         case InputSignalStatus::Ntsc:
-            return static_cast<InputSignalStatus>(status);
+            return static_cast<InputSignalStatus>(response[1]);
         default:
             return std::nullopt;
     }

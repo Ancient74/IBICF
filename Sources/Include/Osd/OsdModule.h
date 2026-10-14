@@ -262,7 +262,7 @@ public:
                                        BlinkingPeriod blinkingPeriod, BlinkingDutyCycle blinkingDutyCycle);
 
     // 0xAB
-    std::optional<InputSignalStatus> GetInputSignalStatus(uint32_t timeoutMs = 100);
+    std::optional<InputSignalStatus> GetInputSignalStatus();
 
     // 0xAC - text output is unavailable on the module while this executes
     void OverwriteCharacterImage(uint8_t characterCode, const CharacterBitmap& bitmap);
@@ -271,7 +271,7 @@ public:
     void RestoreDefaultSettings(bool restoreOutputParams, bool restoreUartParams, bool restoreFont, bool restoreInitSequence);
 
     // 0xAE - returns sequence number (0-127) assigned by the module
-    std::optional<uint8_t> SaveCommandSequence(std::span<const uint8_t> commandSequence, uint32_t timeoutMs = 100);
+    std::optional<uint8_t> SaveCommandSequence(std::span<const uint8_t> commandSequence);
 
     // 0xAF
     void ExecuteCommandSequence(uint8_t sequenceNumber);
