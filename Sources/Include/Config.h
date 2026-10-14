@@ -8,11 +8,10 @@ namespace Config
 
     constexpr uint32_t ADC_READ_TIMEOUT_MS = 200;
 
-    constexpr uint32_t BATTERY_EXTRA_BITS = 4;
-    constexpr uint32_t BATTERY_ADC_OVERSAMPLING_RATIO = 1u << (2 * BATTERY_EXTRA_BITS);
+    constexpr uint32_t BATTERY_ADC_OVERSAMPLING_RATIO = 16;
+    constexpr float BATTERY_VREF_CALIBRATION_MAX_VALUE = 4095.0f;
     constexpr float BATTERY_MAX_VOLTAGE = 25.2f;
     constexpr float BATTERY_MIN_VOLTAGE = 22.2f;
-    constexpr float BATTERY_ADC_REF_VOLTAGE = 3.3f;
     constexpr float BATTERY_ADC_DIVIDER_RATIO = (75000.0f + 10000.0f) / 10000.0f;
     constexpr uint32_t BATTERY_SAMPLING_RATE_HZ = 20;
 

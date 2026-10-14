@@ -17,7 +17,6 @@ public:
 
     Status StartDmaTransactionAndWait(std::span<uint16_t> buffer);
 
-    uint32_t GetSamplingRate() const;
     uint32_t GetAdcResolutionBits() const;
 
     static AdcSensor* GetInstance();
