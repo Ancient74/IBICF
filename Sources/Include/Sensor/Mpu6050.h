@@ -72,8 +72,9 @@ public:
 private:
     static constexpr uint8_t DlpfValue = 3;
     static constexpr uint16_t GyroSamplingRate = DlpfValue > 0 ? 1000 : 8000;
-    static constexpr uint16_t AccelerometerSamplingRate = 1000;
-    static constexpr uint8_t ClockPrescaler = (GyroSamplingRate / AccelerometerSamplingRate) - 1;
+    // At DlpfValue == 3 effective sensing is about 45Hz. So with prescaler 5 we get 200Hz sampling rate.
+    // Which is is plenty to avoid nyquist limit.
+    static constexpr uint8_t ClockPrescaler = 5 - 1;
 
     std::array<float, 3> m_gyroCalibration{};
     float m_accelerometerResolution;
