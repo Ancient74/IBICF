@@ -43,7 +43,7 @@ namespace Config
 
     constexpr uint32_t CRSF_READER_TIMEOUT_MS = 200;
 
-    constexpr uint32_t TRAMP_PROTOCOL_POLLING_RATE_MS = 200;
+    constexpr uint32_t TRAMP_PROTOCOL_POLLING_RATE_MS = 500;
     constexpr uint8_t TRAMP_PROTOCOL_MAX_SET_RETRIES = 20;
     constexpr uint32_t TRAMP_PROTOCOL_RESPONSE_TIMEOUT_MS = TRAMP_PROTOCOL_POLLING_RATE_MS * 5;
 
