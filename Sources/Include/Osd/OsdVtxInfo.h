@@ -1,14 +1,18 @@
 #pragma once
-#include "BatterySensorNode.h"
 #include "OsdRenderer.h"
 #include "TrampProtocol.h"
 
-class OsdVtxInfo : public IOsdRenderable
+class OsdVtxInfo : public OsdRenderer<OsdVtxInfo, VtxInfo>
 {
 public:
-    OsdVtxInfo(OsdController& osd, TrampProtocolController& controller);
+    explicit OsdVtxInfo(OsdController& osd)
+        : OsdRenderer<OsdVtxInfo, VtxInfo>(osd)
+        , m_xPos(GetOsdController().Cols() - 10)
+        , m_yPos(2)
+    {
+    }
 
-    void RenderIfPending() override;
+    void Render(const VtxInfo& info);
 
 private:
     static constexpr uint8_t VtxIcon = 0xBE;
@@ -29,15 +33,13 @@ private:
         result['P'] = 0x2A;
         result['I'] = 0x12;
         result['T'] = 0x1E;
+        result['d'] = 0x0E;
+        result['W'] = 0x21;
         result[' '] = 0x00;
 
         return result;
     }();
 
-    OsdController& m_osd;
-    TrampProtocolController& m_controller;
     const uint8_t m_xPos;
     const uint8_t m_yPos;
-    bool m_currentPit = false;
-    uint16_t m_currentPower = false;
 };

@@ -204,7 +204,8 @@ extern "C" void main_cpp()
     trampProtocolController.Start();
     LogInfo(MODULE, "VTX communication started");
 
-    static OsdVtxInfo osdVtxNode{osdController, trampProtocolController};
+    static OsdVtxInfo osdVtxNode{osdController};
+    Connect(trampProtocolController.GetVtxInfoNode(), osdVtxNode);
     osdCompositorTask.Register(osdVtxNode);
 
     fusion.Start();

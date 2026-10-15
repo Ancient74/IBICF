@@ -80,6 +80,12 @@ struct TrampTemperature
 static_assert(sizeof(TrampTemperature) == 12);
 #pragma pack(pop)
 
+struct VtxInfo
+{
+    bool pitMode;
+    uint16_t actualPowerMw;
+};
+
 class TrampFrameParser
     : public NodeInput<TrampFrameParser, uint8_t>
     , public NodeOutput<TrampFrameParser, TrampFrame, 1>
@@ -126,6 +132,12 @@ class TrampProtocolController
     , public NodeOutput<TrampProtocolController, std::span<const uint8_t>, 1>
 {
 public:
+    class VtxInfoOutput : public NodeOutput<VtxInfoOutput, VtxInfo, 1>
+    {
+    public:
+        using NodeOutput<VtxInfoOutput, VtxInfo, 1>::Publish;
+    };
+
     TrampProtocolController(const char* taskName);
     ~TrampProtocolController();
 
@@ -143,6 +155,7 @@ public:
     std::optional<TrampStatus> GetStatus() const;
     std::optional<TrampTemperature> GetTemperature() const;
     TrampConnectionState GetConnectionState() const;
+    VtxInfoOutput& GetVtxInfoNode() { return m_vtxInfoOutput; }
 
 private:
     struct DesiredState
@@ -189,4 +202,5 @@ private:
     std::optional<TrampCapabilities> m_capabilities;
     std::optional<TrampStatus> m_status;
     std::optional<TrampTemperature> m_temperature;
+    VtxInfoOutput m_vtxInfoOutput;
 };
