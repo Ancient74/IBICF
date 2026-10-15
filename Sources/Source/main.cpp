@@ -27,6 +27,7 @@
 #include "PlaneControllerNode.h"
 #include "OsdAltitudeNode.h"
 #include "OsdFlightModeNode.h"
+#include "OsdThrustNode.h"
 #include "CrsfLib/FrameParserNode.hpp"
 #include "CrsfFrameReaderNode.h"
 #include "CrsfFrameProcessorNode.h"
@@ -165,12 +166,14 @@ extern "C" void main_cpp()
     static OsdFlightModeNode osdFlightModeNode{osdController};
     static OsdRcLinkNode osdRcLinkNode{osdController};
     static OsdAltitudeNode osdAltitudeNode{osdController};
+    static OsdThrustNode osdThrustNode{osdController};
 
-    static OsdCompositorTask<6> osdCompositorTask{"OsdRenderer"};
+    static OsdCompositorTask<7> osdCompositorTask{"OsdRenderer"};
     osdCompositorTask.Register(osdHorizonNode);
     osdCompositorTask.Register(osdBatteryInfoNode);
     osdCompositorTask.Register(osdFlightModeNode);
     osdCompositorTask.Register(osdRcLinkNode);
+    osdCompositorTask.Register(osdThrustNode);
 
     static ManualFlightMode lowPosFlightMode{};
     static ManualFlightMode midPosFlightMode{};
@@ -188,6 +191,7 @@ extern "C" void main_cpp()
 
     Connect(fusion, osdHorizonNode);
     Connect(batterySensor, osdBatteryInfoNode);
+    Connect(thrust, osdThrustNode);
 
     static HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim1, hdma_tim1_up};
     static TrampFrameParser trampParser{"TrampFrameParser"};

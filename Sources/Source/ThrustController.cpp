@@ -15,4 +15,5 @@ ThrustController::~ThrustController()
 void ThrustController::SetThrust(uint8_t value)
 {
     __HAL_TIM_SET_COMPARE(&m_timer, m_channel, value * m_timer.Instance->ARR / 100);
+    Publish(value);
 }
