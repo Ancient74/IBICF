@@ -72,7 +72,8 @@ public:
         const float pinVoltage = (batteryRaw / m_adcMax) * vdda;
         const float batteryVoltage = pinVoltage * DividerRatio;
         const float clampedVoltage = std::clamp(batteryVoltage, MinBatteryVoltage, MaxBatteryVoltage);
-        const uint8_t percentLevel = static_cast<uint8_t>(clampedVoltage + 0.5f);
+        const float chargeFraction = (clampedVoltage - MinBatteryVoltage) / (MaxBatteryVoltage - MinBatteryVoltage);
+        const uint8_t percentLevel = static_cast<uint8_t>(std::round(chargeFraction * 100.0f));
 
         this->Publish({batteryVoltage, percentLevel});
     }
