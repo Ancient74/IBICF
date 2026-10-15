@@ -12,7 +12,7 @@ class IThrustController
 {
 public:
     virtual ~IThrustController() = default;
-    virtual void SetThrust(uint16_t value) = 0;
+    virtual void SetThrust(uint8_t value) = 0;
 };
 
 class PlaneModel

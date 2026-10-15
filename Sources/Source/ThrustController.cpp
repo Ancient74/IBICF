@@ -12,7 +12,7 @@ ThrustController::~ThrustController()
     HAL_TIM_PWM_Stop(&m_timer, m_channel);
 }
 
-void ThrustController::SetThrust(uint16_t value)
+void ThrustController::SetThrust(uint8_t value)
 {
     __HAL_TIM_SET_COMPARE(&m_timer, m_channel, value * m_timer.Instance->ARR / 100);
 }
