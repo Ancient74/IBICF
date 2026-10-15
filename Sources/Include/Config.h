@@ -48,8 +48,8 @@ namespace Config
     constexpr uint32_t TRAMP_PROTOCOL_RESPONSE_TIMEOUT_MS = TRAMP_PROTOCOL_POLLING_RATE_MS * 5;
 
     constexpr uint16_t VTX_PIT_MODE_POWER = 25;
-    constexpr uint16_t VTX_MID_POS_POWER = 1000;
-    constexpr uint16_t VTX_HIGH_POS_POWER = 2000;
+    constexpr uint16_t VTX_MID_POS_POWER = 200;
+    constexpr uint16_t VTX_HIGH_POS_POWER = 400;
 
     constexpr uint8_t CRUISE_FLIGHT_MODE_REFRESH_RATE_HZ = 200;
 
