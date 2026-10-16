@@ -23,7 +23,7 @@ private:
 
     std::optional<LogMessage> m_pendingMessage = std::nullopt;
 
-    QueueHandle_t m_queue;
+    QueueHandle_t m_queue{};
     StaticQueue_t m_queueBuffer;
     uint8_t m_queueStorage[Config::LOGGER_QUEUE_SIZE * sizeof(LogMessage)];
     SemaphoreHandle_t m_txCompleteSemaphore{};

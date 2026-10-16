@@ -5,13 +5,13 @@
 #include "queue.h"
 #include "usbd_def.h"
 
+extern "C" USBD_HandleTypeDef hUsbDeviceFS;
+
 extern "C" void LoggerTransmitCompleteFromISR()
 {
     if (auto* logger = Logger::GetInstance())
         logger->TransmitCompleteFromISR();
 }
-
-extern volatile uint8_t CdcDtr;
 
 #ifdef DEBUG
 bool SubmitLog(const LogMessage& message)
@@ -20,23 +20,12 @@ bool SubmitLog(const LogMessage& message)
 }
 #endif
 
-namespace
-{
-    void WaitForUsb()
-    {
-        while (!CdcDtr)
-            HAL_Delay(10);
-    }
-}
-
 Logger::Logger(const char* taskName)
     : m_thread(taskName, *this)
 {
     if (s_instance)
         return;
     s_instance = this;
-
-    WaitForUsb();
 
     m_queue = xQueueCreateStatic(Config::LOGGER_QUEUE_SIZE, sizeof(LogMessage), m_queueStorage, &m_queueBuffer);
     configASSERT(m_queue != nullptr);
@@ -52,6 +41,8 @@ Logger* Logger::GetInstance()
 
 bool Logger::Log(const LogMessage& message)
 {
+    if (!m_queue)
+        return false;
     return xQueueSend(m_queue, &message, 0) == pdTRUE;
 }
 
@@ -64,6 +55,17 @@ void Logger::TransmitCompleteFromISR()
 
 void Logger::RunTaskIteration()
 {
+    if (hUsbDeviceFS.dev_state != USBD_STATE_CONFIGURED)
+    {
+        if (m_txInFlight)
+        {
+            m_txInFlight = false;
+            xSemaphoreTake(m_txCompleteSemaphore, 0);
+        }
+        vTaskDelay(pdMS_TO_TICKS(Config::LOGGER_BUSY_RETRY_INTERVAL_MS));
+        return;
+    }
+
     if (!m_pendingMessage.has_value())
     {
         LogMessage message{};
