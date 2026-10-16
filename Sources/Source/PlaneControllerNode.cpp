@@ -3,7 +3,6 @@
 #include <cstring>
 #include <span>
 #include "Config.h"
-#include "Log.h"
 
 namespace
 {
@@ -11,24 +10,24 @@ namespace
     {
         return { .pitch = packet.pitch, .roll = packet.roll, .yaw = packet.yaw, .thrust = packet.thrust };
     }
-
-    constexpr const char* MODULE = "PlaneController";
 }
 
 PlaneControllerNode::PlaneControllerNode(PlaneModel& model
+    , IFlightMode& disarmedFlightMode
     , IFlightMode& lowPosFlightMode
     , IFlightMode& midPosFlightMode
     , IFlightMode& highPosFlightMode
     , IFlightMode& failSafeFlightMode)
-    : m_isInitialized(false)
-    , m_isArmed(false)
-    , m_currentFlightMode(nullptr)
+    : m_currentFlightMode(&disarmedFlightMode)
+    , m_disarmedFlightMode(disarmedFlightMode)
     , m_lowPosFlightMode(lowPosFlightMode)
     , m_midPosFlightMode(midPosFlightMode)
     , m_highPosFlightMode(highPosFlightMode)
     , m_failSafeFlightMode(failSafeFlightMode)
     , m_model(model)
 {
+    m_disarmedFlightMode.OnEnter();
+
     m_watchdogTimer = xTimerCreateStatic("RcWatchdog",
         pdMS_TO_TICKS(Config::RC_LINK_TIMEOUT_MS),
         pdFALSE, this, &PlaneControllerNode::WatchdogCallback,
@@ -49,10 +48,10 @@ void PlaneControllerNode::WatchdogCallback(TimerHandle_t timer)
 
 void PlaneControllerNode::OnLinkLost()
 {
-    if (!m_isArmed.load())
+    auto* previousMode = m_currentFlightMode.load();
+    if (previousMode == &m_disarmedFlightMode)
         return;
 
-    auto* previousMode = m_currentFlightMode.load();
     if (previousMode != nullptr)
         previousMode->OnExit();
     m_currentFlightMode.store(&m_failSafeFlightMode);
@@ -70,8 +69,6 @@ void PlaneControllerNode::OutputPushCallback(TimerHandle_t timer)
 
 void PlaneControllerNode::PushFailsafeOutputs()
 {
-    if (!m_isInitialized.load())
-        return;
     auto* mode = m_currentFlightMode.load();
     auto controlCommands = mode->Translate({});
     m_model.Pitch(controlCommands.pitch);
@@ -87,43 +84,52 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     {
         xTimerStop(m_outputPushTimer, 0);
     }
-    bool isArmed = m_isArmed.exchange(packet.isArmed);
-    if (isArmed != packet.isArmed)
-        LogInfo(MODULE, "Motor is %s", packet.isArmed ? "armed" : "disarmed");
     bool flightModeChanged = false;
     auto* currentFlightMode = m_currentFlightMode.load();
-    switch (packet.flightMode)
+    if (!packet.isArmed)
     {
-    case TriSwitchPosition::Low:
-        if (currentFlightMode != &m_lowPosFlightMode)
+        if (currentFlightMode != &m_disarmedFlightMode)
         {
             if (currentFlightMode != nullptr)
                 currentFlightMode->OnExit();
-            m_currentFlightMode.store(&m_lowPosFlightMode);
+            m_currentFlightMode.store(&m_disarmedFlightMode);
             flightModeChanged = true;
         }
-        break;
-    case TriSwitchPosition::Mid:
-        if (currentFlightMode != &m_midPosFlightMode)
+    }
+    else
+    {
+        switch (packet.flightMode)
         {
-            if (currentFlightMode != nullptr)
-                currentFlightMode->OnExit();
-            m_currentFlightMode.store(&m_midPosFlightMode);
-            flightModeChanged = true;
+        case TriSwitchPosition::Low:
+            if (currentFlightMode != &m_lowPosFlightMode)
+            {
+                if (currentFlightMode != nullptr)
+                    currentFlightMode->OnExit();
+                m_currentFlightMode.store(&m_lowPosFlightMode);
+                flightModeChanged = true;
+            }
+            break;
+        case TriSwitchPosition::Mid:
+            if (currentFlightMode != &m_midPosFlightMode)
+            {
+                if (currentFlightMode != nullptr)
+                    currentFlightMode->OnExit();
+                m_currentFlightMode.store(&m_midPosFlightMode);
+                flightModeChanged = true;
+            }
+            break;
+        case TriSwitchPosition::High:
+            if (currentFlightMode != &m_highPosFlightMode)
+            {
+                if (currentFlightMode != nullptr)
+                    currentFlightMode->OnExit();
+                m_currentFlightMode.store(&m_highPosFlightMode);
+                flightModeChanged = true;
+            }
+            break;
+        default:
+            break;
         }
-        break;
-    case TriSwitchPosition::High:
-        if (currentFlightMode != &m_highPosFlightMode)
-        {
-            if (currentFlightMode != nullptr)
-                currentFlightMode->OnExit();
-            m_currentFlightMode.store(&m_highPosFlightMode);
-            flightModeChanged = true;
-        }
-        break;
-
-    default:
-        break;
     }
     if (flightModeChanged)
     {
@@ -136,13 +142,5 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     m_model.Pitch(controlCommands.pitch);
     m_model.Roll(controlCommands.roll);
     m_model.Yaw(controlCommands.yaw);
-
-    if (!m_isInitialized && packet.isArmed)
-    {
-        m_model.Thrust(0);
-        return;
-    }
-    m_isInitialized = true;
-    uint8_t allowedThrust = packet.isArmed ? static_cast<uint8_t>(controlCommands.thrust) : 0;
-    m_model.Thrust(allowedThrust);
+    m_model.Thrust(static_cast<uint8_t>(controlCommands.thrust));
 }

@@ -13,6 +13,7 @@ class PlaneControllerNode
 {
 public:
     PlaneControllerNode(PlaneModel& model
+        , IFlightMode& disarmedFlightMode
         , IFlightMode& lowPosFlightMode
         , IFlightMode& midPosFlightMode
         , IFlightMode& highPosFlightMode
@@ -25,9 +26,8 @@ private:
     void OnLinkLost();
     void PushFailsafeOutputs();
 
-    std::atomic<bool> m_isInitialized;
-    std::atomic<bool> m_isArmed;
     std::atomic<IFlightMode*> m_currentFlightMode;
+    IFlightMode& m_disarmedFlightMode;
     IFlightMode& m_lowPosFlightMode;
     IFlightMode& m_midPosFlightMode;
     IFlightMode& m_highPosFlightMode;

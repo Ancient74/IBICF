@@ -36,3 +36,14 @@ public:
     PitchRollYawThrust Translate(const PitchRollYawThrust& command) override;
     const char* GetName() const override;
 };
+
+class DisarmedFlightMode : public FlightModeBase
+{
+public:
+    PitchRollYawThrust Translate(const PitchRollYawThrust& command) override;
+    const char* GetName() const override;
+
+protected:
+    void OnEnterInternal() override;
+    void OnExitInternal() override;
+};

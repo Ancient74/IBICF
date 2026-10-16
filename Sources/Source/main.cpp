@@ -3,6 +3,7 @@
 #include "BME280.h"
 #include "Config.h"
 #include "FailsafeFlightMode.h"
+#include "FlightMode.h"
 #include "HalfDuplexSoftwareUart.h"
 #include "Log.h"
 #include "Logger.h"
@@ -158,6 +159,7 @@ extern "C" void main_cpp()
     static OsdLayout osdLayout{osdController};
     static OsdRenderer<OsdLayout> osdRenderer{"OsdRenderer", osdLayout};
 
+    static DisarmedFlightMode disarmedFlightMode{};
     static ManualFlightMode lowPosFlightMode{};
     static ManualFlightMode midPosFlightMode{};
     static CruiseFlightMode highPosFlightMode{"CruiseFlightMode"};
@@ -207,6 +209,7 @@ extern "C" void main_cpp()
 
     static VtxControllerNode vtxControllerNode{trampProtocolController};
     static PlaneControllerNode planeControllerNode{model,
+        disarmedFlightMode,
         lowPosFlightMode,
         midPosFlightMode,
         highPosFlightMode,
