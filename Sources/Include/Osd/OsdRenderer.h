@@ -1,6 +1,11 @@
 #pragma once
 #include "OsdController.h"
-#include "optional"
+#include "PubSubLib/Node.hpp"
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include <atomic>
+#include <concepts>
+#include <optional>
 
 class IOsdRenderable
 {
