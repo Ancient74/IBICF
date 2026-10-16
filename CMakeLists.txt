@@ -79,6 +79,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Emit stack usage information for analysis
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CXX_FLAGS "${CXX_FLAGS} -fstack-usage")
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY C_FLAGS "${C_FLAGS} -fstack-usage")
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -Wl,-u,_printf_float)
 
 # Remove wrong libob.a library dependency when using cpp files
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
