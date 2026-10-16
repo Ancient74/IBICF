@@ -184,6 +184,8 @@ extern "C" void main_cpp()
 
     if (useBme)
     {
+        Connect(bmeNode, bmeFilterNode);
+        Connect(bmeFilterNode, altitudeNode);
         Connect(altitudeNode, osdAltitudeNode);
         Connect(altitudeNode, static_cast<NodeInput<CruiseFlightMode, float>&>(highPosFlightMode));
         osdCompositorTask.Register(osdAltitudeNode);
