@@ -82,7 +82,6 @@ static_assert(sizeof(TrampTemperature) == 12);
 
 struct VtxInfo
 {
-    bool pitMode;
     uint16_t actualPowerMw;
 };
 

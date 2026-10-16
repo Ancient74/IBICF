@@ -204,7 +204,7 @@ void TrampProtocolController::Process(const TrampFrame& frame)
         if (m_connectionState.load() == TrampConnectionState::Handshaking)
             m_connectionState.store(TrampConnectionState::Online);
         xSemaphoreGive(m_dataMutex);
-        m_vtxInfoOutput.Publish({status.pitMode != 0, status.actualPowerMw});
+        m_vtxInfoOutput.Publish({status.actualPowerMw});
         break;
     }
     case TrampCommand::Temperature:

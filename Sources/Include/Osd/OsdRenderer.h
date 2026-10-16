@@ -1,74 +1,32 @@
 #pragma once
-#include "OsdController.h"
-#include "PubSubLib/Node.hpp"
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include <atomic>
-#include <concepts>
-#include <optional>
+#include <cstdint>
+#include "TaskThread.h"
+#include "Config.h"
 
-class IOsdRenderable
+template<typename RenderTarget, uint16_t UpdateRateHz = Config::OSD_REFRESH_RATE_HZ>
+class OsdRenderer
 {
 public:
-    virtual ~IOsdRenderable() = default;
-    virtual void RenderIfPending() = 0;
-};
+    static_assert(UpdateRateHz > 0, "UpdateRateHz must be greater than zero");
 
-template<typename Derived, typename RenderingData>
-class OsdRenderer : public IOsdRenderable, public NodeInput<Derived, RenderingData>
-{
-public:
-    explicit OsdRenderer(OsdController& osd)
-        : m_osd(osd)
+    OsdRenderer(const char* taskName, RenderTarget& renderTarget)
+        : m_thread(taskName, *this)
+        , m_renderTarget(renderTarget)
     {
-        static_assert(requires(Derived& r, RenderingData data) {
-            { r.Render(data) } -> std::same_as<void>;
-        });
-        m_mutex = xSemaphoreCreateMutexStatic(&m_mutexBuffer);
-        configASSERT(m_mutex != nullptr);
     }
 
-    ~OsdRenderer() override
-    {
-        vSemaphoreDelete(m_mutex);
-    }
+    ~OsdRenderer() { m_thread.Stop(); }
 
-    void Process(RenderingData renderingData)
-    {
-        xSemaphoreTake(m_mutex, portMAX_DELAY);
-        m_latestData = renderingData;
-        xSemaphoreGive(m_mutex);
-    }
+    void Start() { m_thread.Start(); }
+    void Stop() { m_thread.Stop(); }
 
-    void SetEnabled(bool enabled)
+    void RunTaskIteration()
     {
-        m_enabled.store(enabled, std::memory_order_release);
-    }
-
-    void RenderIfPending() override
-    {
-        if (!m_enabled.load(std::memory_order_acquire))
-            return;
-
-        xSemaphoreTake(m_mutex, portMAX_DELAY);
-        auto data = m_latestData;
-        m_latestData = std::nullopt;
-        xSemaphoreGive(m_mutex);
-        if (!data.has_value())
-            return;
-        static_cast<Derived*>(this)->Render(data.value());
-    }
-
-protected:
-    OsdController& GetOsdController() const
-    {
-        return m_osd;
+        m_renderTarget.RenderIfPending();
     }
 
 private:
-    OsdController& m_osd;
-    std::optional<RenderingData> m_latestData{};
-    SemaphoreHandle_t m_mutex{};
-    StaticSemaphore_t m_mutexBuffer{};
-    std::atomic_bool m_enabled{true};
+    TaskThread<OsdRenderer<RenderTarget, UpdateRateHz>, Config::Task::OSD_RENDERER_TASK_STACK_SIZE,
+        Config::Task::OSD_RENDERER_TASK_PRIORITY, pdMS_TO_TICKS(1000 / UpdateRateHz)> m_thread;
+    RenderTarget& m_renderTarget;
 };

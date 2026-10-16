@@ -15,16 +15,13 @@ class OsdController
 public:
     explicit OsdController(OsdModule& module);
 
-    uint8_t Rows() const;
-    static constexpr uint8_t Cols() { return s_cols; }
+    static constexpr uint8_t Rows() { return Config::OSD_ROWS; }
+    static constexpr uint8_t Cols() { return Config::OSD_COLS; }
 
     void DrawCells(std::span<const OsdCell> cells);
 
 private:
-    static constexpr size_t s_maxCellCount = 16 * Config::OSD_COLS;
-    std::array<OsdCell, s_maxCellCount> m_lastCells{};
-    size_t m_lastCellCount = 0;
+    static constexpr size_t s_maxCellCount = Config::OSD_ROWS * Config::OSD_COLS;
+    std::array<std::array<uint8_t, Config::OSD_COLS>, Config::OSD_ROWS> m_lastChars{};
     OsdModule& m_module;
-    uint8_t m_rows;
-    static constexpr uint8_t s_cols = Config::OSD_COLS;
 };

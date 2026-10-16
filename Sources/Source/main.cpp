@@ -19,21 +19,15 @@
 #include <PubSubLib/Node.hpp>
 #include "EmaFilterNode.h"
 #include "OsdModule.h"
-#include "OsdCompositorTask.h"
-#include "OsdHorizonNode.h"
+#include "OsdRenderer.h"
+#include "OsdLayout.h"
 #include "BatterySensorNode.h"
-#include "OsdBatteryVoltageNode.h"
 #include "PressureToAltitudeConverterNode.h"
 #include "PlaneControllerNode.h"
-#include "OsdAltitudeNode.h"
-#include "OsdFlightModeNode.h"
-#include "OsdThrustNode.h"
 #include "CrsfLib/FrameParserNode.hpp"
 #include "CrsfFrameReaderNode.h"
 #include "CrsfFrameProcessorNode.h"
-#include <OsdVtxInfo.h>
 #include "VtxControllerNode.h"
-#include <OsdRcLinkNode.h>
 #include "TaskDelegate.h"
 
 extern UART_HandleTypeDef huart1;
@@ -161,19 +155,8 @@ extern "C" void main_cpp()
     static Uart osdUart{huart2, osdReader, watchdog};
     static OsdModule osdModule{osdUart, osdReader};
     static OsdController osdController{osdModule};
-    static OsdHorizonNode osdHorizonNode{osdController};
-    static OsdBatteryVoltageNode osdBatteryInfoNode{osdController};
-    static OsdFlightModeNode osdFlightModeNode{osdController};
-    static OsdRcLinkNode osdRcLinkNode{osdController};
-    static OsdAltitudeNode osdAltitudeNode{osdController};
-    static OsdThrustNode osdThrustNode{osdController};
-
-    static OsdCompositorTask<7> osdCompositorTask{"OsdRenderer"};
-    osdCompositorTask.Register(osdHorizonNode);
-    osdCompositorTask.Register(osdBatteryInfoNode);
-    osdCompositorTask.Register(osdFlightModeNode);
-    osdCompositorTask.Register(osdRcLinkNode);
-    osdCompositorTask.Register(osdThrustNode);
+    static OsdLayout osdLayout{osdController};
+    static OsdRenderer<OsdLayout> osdRenderer{"OsdRenderer", osdLayout};
 
     static ManualFlightMode lowPosFlightMode{};
     static ManualFlightMode midPosFlightMode{};
@@ -186,14 +169,13 @@ extern "C" void main_cpp()
     {
         Connect(bmeNode, bmeFilterNode);
         Connect(bmeFilterNode, altitudeNode);
-        Connect(altitudeNode, osdAltitudeNode);
+        Connect(altitudeNode, static_cast<NodeInput<OsdLayout, float>&>(osdLayout));
         Connect(altitudeNode, static_cast<NodeInput<CruiseFlightMode, float>&>(highPosFlightMode));
-        osdCompositorTask.Register(osdAltitudeNode);
     }
 
-    Connect(fusion, osdHorizonNode);
-    Connect(batterySensor, osdBatteryInfoNode);
-    Connect(thrust, osdThrustNode);
+    Connect(fusion, static_cast<NodeInput<OsdLayout, Quaternion<float>>&>(osdLayout));
+    Connect(batterySensor, static_cast<NodeInput<OsdLayout, BatteryInfo>&>(osdLayout));
+    Connect(thrust, static_cast<NodeInput<OsdLayout, uint8_t>&>(osdLayout));
 
     static HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim1, hdma_tim1_up};
     static TrampFrameParser trampParser{"TrampFrameParser"};
@@ -206,9 +188,7 @@ extern "C" void main_cpp()
     trampProtocolController.Start();
     LogInfo(MODULE, "VTX communication started");
 
-    static OsdVtxInfo osdVtxNode{osdController};
-    Connect(trampProtocolController.GetVtxInfoNode(), osdVtxNode);
-    osdCompositorTask.Register(osdVtxNode);
+    Connect(trampProtocolController.GetVtxInfoNode(), static_cast<NodeInput<OsdLayout, VtxInfo>&>(osdLayout));
 
     fusion.Start();
     LogInfo(MODULE, "Sensor fusion started");
@@ -233,13 +213,14 @@ extern "C" void main_cpp()
         failsafeFlightMode};
     Connect(crsfFrameProcessor.GetRcPacketNode(), vtxControllerNode);
     Connect(crsfFrameProcessor.GetRcPacketNode(), planeControllerNode);
-    Connect(crsfFrameProcessor.GetLinkInfoNode(), osdRcLinkNode);
-    Connect(planeControllerNode, osdFlightModeNode);
+    Connect(crsfFrameProcessor.GetLinkInfoNode(),
+            static_cast<NodeInput<OsdLayout, CrsfLib::LinkStatisticsFrame>&>(osdLayout));
+    Connect(planeControllerNode, static_cast<NodeInput<OsdLayout, std::span<const char>>&>(osdLayout));
 
     crsfFrameReader.Start();
     LogInfo(MODULE, "CRSF receiver started");
 
-    osdCompositorTask.StartCompositor();
+    osdRenderer.Start();
     LogInfo(MODULE, "OSD started");
 
     while (true)

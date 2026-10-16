@@ -36,6 +36,12 @@ namespace Config
     constexpr uint16_t OSD_MODULE_COMMAND_SEQUENCE_SIZE = 64;
     constexpr uint32_t OSD_COMMAND_RESPONSE_TIMEOUT_MS = 100;
 
+    constexpr uint8_t NTSC_ROWS = 12;
+    constexpr uint8_t PAL_ROWS = 16;
+    constexpr uint8_t NTSC_MODE = 0;
+    constexpr uint8_t PAL_MODE = 1;
+    constexpr uint8_t OSD_OPERATION_MODE = PAL_MODE;
+    constexpr uint8_t OSD_ROWS = OSD_OPERATION_MODE == NTSC_MODE ? NTSC_ROWS : PAL_ROWS;
     constexpr uint8_t OSD_COLS = 29;
     constexpr uint8_t OSD_MAX_TEXT_SIZE = OSD_COLS;
 
@@ -89,7 +95,7 @@ namespace Config
         constexpr uint32_t HEARTBEAT_INTERVAL_MS = 1000;
 
         constexpr UBaseType_t LOGGER_PRIORITY                    = 1;
-        constexpr UBaseType_t OSD_COMPOSITOR_TASK_PRIORITY       = 2;
+        constexpr UBaseType_t OSD_RENDERER_TASK_PRIORITY         = 2;
         constexpr UBaseType_t TRAMP_FRAME_PARSER_PRIORITY        = 3;
         constexpr UBaseType_t TRAMP_PROTOCOL_CONTROLLER_PRIORITY = 3;
         constexpr UBaseType_t HALF_DUPLEX_SOFTWARE_UART_PRIORITY = 4;
@@ -107,7 +113,7 @@ namespace Config
         constexpr uint16_t BATTERY_SENSOR_NODE_STACK_SIZE       = 512;
         constexpr uint16_t TRAMP_FRAME_PARSER_STACK_SIZE        = 512;
         constexpr uint16_t TRAMP_PROTOCOL_CONTROLLER_STACK_SIZE = 512;
-        constexpr uint16_t OSD_COMPOSITOR_TASK_STACK_SIZE       = 512;
+        constexpr uint16_t OSD_RENDERER_TASK_STACK_SIZE         = 1024;
         constexpr uint16_t SENSOR_FUSION_NODE_STACK_SIZE        = 512;
         constexpr uint16_t SENSOR_SAMPLING_NODE_STACK_SIZE      = 512;
         constexpr uint16_t LOGGER_STACK_SIZE                    = 2048;
