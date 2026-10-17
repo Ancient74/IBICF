@@ -144,3 +144,10 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     m_model.Yaw(controlCommands.yaw);
     m_model.Thrust(static_cast<uint8_t>(controlCommands.thrust));
 }
+
+void PlaneControllerNode::PublishFlightModeName()
+{
+    auto* currentFlightMode = m_currentFlightMode.load();
+    const char* name = currentFlightMode->GetName();
+    Publish(std::span<const char>(name, std::strlen(name)));
+}

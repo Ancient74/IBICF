@@ -178,6 +178,7 @@ extern "C" void main_cpp()
     Connect(fusion, static_cast<NodeInput<OsdLayout, Quaternion<float>>&>(osdLayout));
     Connect(batterySensor, static_cast<NodeInput<OsdLayout, BatteryInfo>&>(osdLayout));
     Connect(thrust, static_cast<NodeInput<OsdLayout, uint8_t>&>(osdLayout));
+    thrust.PublishCurrentThrust();
 
     static HalfDuplexSoftwareUart swUart{TRAMP_Pin, TRAMP_GPIO_Port, htim1, hdma_tim1_up};
     static TrampFrameParser trampParser{"TrampFrameParser"};
@@ -219,7 +220,7 @@ extern "C" void main_cpp()
     Connect(crsfFrameProcessor.GetLinkInfoNode(),
             static_cast<NodeInput<OsdLayout, CrsfLib::LinkStatisticsFrame>&>(osdLayout));
     Connect(planeControllerNode, static_cast<NodeInput<OsdLayout, std::span<const char>>&>(osdLayout));
-
+    planeControllerNode.PublishFlightModeName();
     crsfFrameReader.Start();
     LogInfo(MODULE, "CRSF receiver started");
 

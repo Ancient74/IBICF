@@ -20,6 +20,7 @@ public:
         , IFlightMode& failSafeFlightMode);
     void Process(const RcPacket& packet);
 
+    void PublishFlightModeName();
 private:
     static void WatchdogCallback(TimerHandle_t timer);
     static void OutputPushCallback(TimerHandle_t timer);

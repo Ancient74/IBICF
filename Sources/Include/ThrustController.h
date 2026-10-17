@@ -12,6 +12,8 @@ public:
     ThrustController(TIM_HandleTypeDef& timer, uint32_t channel);
     ~ThrustController();
 
+    void PublishCurrentThrust();
+
     void SetThrust(uint8_t value) override;
 
 private:

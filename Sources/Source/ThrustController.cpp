@@ -17,3 +17,10 @@ void ThrustController::SetThrust(uint8_t value)
     __HAL_TIM_SET_COMPARE(&m_timer, m_channel, value * m_timer.Instance->ARR / 100);
     Publish(value);
 }
+
+void ThrustController::PublishCurrentThrust()
+{
+    uint32_t compareValue = __HAL_TIM_GET_COMPARE(&m_timer, m_channel);
+    uint8_t thrustValue = static_cast<uint8_t>(compareValue * 100 / m_timer.Instance->ARR);
+    Publish(thrustValue);
+}
