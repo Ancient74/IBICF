@@ -119,7 +119,6 @@ private:
             DotProduct(m_gravityDirection, CrossProduct(m_magReference, measH)),
             DotProduct(m_magReference, measH)
         );
-        printf("psi: %ld\n", lroundf(dPsi * 1000));
         // dPsi is an error, innovation
 
         // next step is to calculate innovation covariance S
