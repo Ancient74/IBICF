@@ -186,7 +186,7 @@ Status Mpu6050::Start()
         return ret;
 
     GyroAccelConfigRegister gyroConfig{};
-    gyroConfig.bits.fullScaleSelect = 0b01;
+    gyroConfig.bits.fullScaleSelect = 0b10;
     ret = WriteByte(MPU6050_GYRO_CONFIG, gyroConfig.value);
     if (ret != Status::Ok)
         return ret;
