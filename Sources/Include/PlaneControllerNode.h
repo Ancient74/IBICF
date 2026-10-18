@@ -4,6 +4,7 @@
 #include "PubSubLib/Node.hpp"
 #include "FlightMode.h"
 #include "FreeRTOS.h"
+#include "semphr.h"
 #include "timers.h"
 #include <atomic>
 
@@ -27,7 +28,7 @@ private:
     void OnLinkLost();
     void PushFailsafeOutputs();
 
-    std::atomic<IFlightMode*> m_currentFlightMode;
+    IFlightMode* m_currentFlightMode;
     IFlightMode& m_disarmedFlightMode;
     IFlightMode& m_lowPosFlightMode;
     IFlightMode& m_midPosFlightMode;
@@ -35,6 +36,9 @@ private:
     IFlightMode& m_failSafeFlightMode;
     PlaneModel& m_model;
 
+    SemaphoreHandle_t m_modeMutex = nullptr;
+    StaticSemaphore_t m_modeMutexBuffer{};
+    std::atomic<TickType_t> m_lastRcPacketTick{0};
     TimerHandle_t m_watchdogTimer = nullptr;
     TimerHandle_t m_outputPushTimer = nullptr;
     StaticTimer_t m_watchdogTimerBuffer{};

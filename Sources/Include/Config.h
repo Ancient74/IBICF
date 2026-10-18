@@ -79,7 +79,7 @@ namespace Config
 
     constexpr uint32_t FAILSAFE_LINK_TIMEOUT_MS = 3000;
     constexpr int32_t  FAILSAFE_HOLD_THRUST = 30;
-    constexpr uint32_t RC_LINK_TIMEOUT_MS = 400;
+    constexpr uint32_t RC_LINK_TIMEOUT_MS = 800;
     constexpr uint32_t FAILSAFE_OUTPUT_PUSH_PERIOD_MS = 20;
 
     constexpr uint16_t LOGGER_QUEUE_SIZE = 10;

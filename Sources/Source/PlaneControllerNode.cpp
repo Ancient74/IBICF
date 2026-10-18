@@ -6,6 +6,27 @@
 
 namespace
 {
+    class MutexLock
+    {
+    public:
+        explicit MutexLock(SemaphoreHandle_t mutex)
+            : m_mutex(mutex)
+        {
+            xSemaphoreTake(m_mutex, portMAX_DELAY);
+        }
+
+        ~MutexLock()
+        {
+            xSemaphoreGive(m_mutex);
+        }
+
+        MutexLock(const MutexLock&) = delete;
+        MutexLock& operator=(const MutexLock&) = delete;
+
+    private:
+        SemaphoreHandle_t m_mutex;
+    };
+
     PitchRollYawThrust FromRcPacket(const RcPacket& packet)
     {
         return { .pitch = packet.pitch, .roll = packet.roll, .yaw = packet.yaw, .thrust = packet.thrust };
@@ -26,6 +47,8 @@ PlaneControllerNode::PlaneControllerNode(PlaneModel& model
     , m_failSafeFlightMode(failSafeFlightMode)
     , m_model(model)
 {
+    m_modeMutex = xSemaphoreCreateMutexStatic(&m_modeMutexBuffer);
+    configASSERT(m_modeMutex != nullptr);
     m_disarmedFlightMode.OnEnter();
 
     m_watchdogTimer = xTimerCreateStatic("RcWatchdog",
@@ -48,13 +71,17 @@ void PlaneControllerNode::WatchdogCallback(TimerHandle_t timer)
 
 void PlaneControllerNode::OnLinkLost()
 {
-    auto* previousMode = m_currentFlightMode.load();
-    if (previousMode == &m_disarmedFlightMode)
+    MutexLock lock(m_modeMutex);
+    if (xTaskGetTickCount() - m_lastRcPacketTick.load(std::memory_order_relaxed)
+        < pdMS_TO_TICKS(Config::RC_LINK_TIMEOUT_MS))
         return;
 
-    if (previousMode != nullptr)
-        previousMode->OnExit();
-    m_currentFlightMode.store(&m_failSafeFlightMode);
+    auto* previousMode = m_currentFlightMode;
+    if (previousMode == &m_disarmedFlightMode || previousMode == &m_failSafeFlightMode)
+        return;
+
+    previousMode->OnExit();
+    m_currentFlightMode = &m_failSafeFlightMode;
     m_failSafeFlightMode.OnEnter();
 
     const char* name = m_failSafeFlightMode.GetName();
@@ -69,8 +96,11 @@ void PlaneControllerNode::OutputPushCallback(TimerHandle_t timer)
 
 void PlaneControllerNode::PushFailsafeOutputs()
 {
-    auto* mode = m_currentFlightMode.load();
-    auto controlCommands = mode->Translate({});
+    MutexLock lock(m_modeMutex);
+    if (m_currentFlightMode != &m_failSafeFlightMode)
+        return;
+
+    auto controlCommands = m_currentFlightMode->Translate({});
     m_model.Pitch(controlCommands.pitch);
     m_model.Roll(controlCommands.roll);
     m_model.Yaw(controlCommands.yaw);
@@ -79,20 +109,21 @@ void PlaneControllerNode::PushFailsafeOutputs()
 
 void PlaneControllerNode::Process(const RcPacket& packet)
 {
+    m_lastRcPacketTick.store(xTaskGetTickCount(), std::memory_order_relaxed);
+    MutexLock lock(m_modeMutex);
     xTimerReset(m_watchdogTimer, 0);
     if (xTimerIsTimerActive(m_outputPushTimer))
     {
         xTimerStop(m_outputPushTimer, 0);
     }
     bool flightModeChanged = false;
-    auto* currentFlightMode = m_currentFlightMode.load();
+    auto* currentFlightMode = m_currentFlightMode;
     if (!packet.isArmed)
     {
         if (currentFlightMode != &m_disarmedFlightMode)
         {
-            if (currentFlightMode != nullptr)
-                currentFlightMode->OnExit();
-            m_currentFlightMode.store(&m_disarmedFlightMode);
+            currentFlightMode->OnExit();
+            m_currentFlightMode = &m_disarmedFlightMode;
             flightModeChanged = true;
         }
     }
@@ -103,27 +134,24 @@ void PlaneControllerNode::Process(const RcPacket& packet)
         case TriSwitchPosition::Low:
             if (currentFlightMode != &m_lowPosFlightMode)
             {
-                if (currentFlightMode != nullptr)
-                    currentFlightMode->OnExit();
-                m_currentFlightMode.store(&m_lowPosFlightMode);
+                currentFlightMode->OnExit();
+                m_currentFlightMode = &m_lowPosFlightMode;
                 flightModeChanged = true;
             }
             break;
         case TriSwitchPosition::Mid:
             if (currentFlightMode != &m_midPosFlightMode)
             {
-                if (currentFlightMode != nullptr)
-                    currentFlightMode->OnExit();
-                m_currentFlightMode.store(&m_midPosFlightMode);
+                currentFlightMode->OnExit();
+                m_currentFlightMode = &m_midPosFlightMode;
                 flightModeChanged = true;
             }
             break;
         case TriSwitchPosition::High:
             if (currentFlightMode != &m_highPosFlightMode)
             {
-                if (currentFlightMode != nullptr)
-                    currentFlightMode->OnExit();
-                m_currentFlightMode.store(&m_highPosFlightMode);
+                currentFlightMode->OnExit();
+                m_currentFlightMode = &m_highPosFlightMode;
                 flightModeChanged = true;
             }
             break;
@@ -133,12 +161,12 @@ void PlaneControllerNode::Process(const RcPacket& packet)
     }
     if (flightModeChanged)
     {
-        currentFlightMode = m_currentFlightMode.load();
+        currentFlightMode = m_currentFlightMode;
         const char* name = currentFlightMode->GetName();
         currentFlightMode->OnEnter();
         Publish(std::span<const char>(name, std::strlen(name)));
     }
-    auto controlCommands = m_currentFlightMode.load()->Translate(FromRcPacket(packet));
+    auto controlCommands = m_currentFlightMode->Translate(FromRcPacket(packet));
     m_model.Pitch(controlCommands.pitch);
     m_model.Roll(controlCommands.roll);
     m_model.Yaw(controlCommands.yaw);
@@ -147,7 +175,7 @@ void PlaneControllerNode::Process(const RcPacket& packet)
 
 void PlaneControllerNode::PublishFlightModeName()
 {
-    auto* currentFlightMode = m_currentFlightMode.load();
-    const char* name = currentFlightMode->GetName();
+    MutexLock lock(m_modeMutex);
+    const char* name = m_currentFlightMode->GetName();
     Publish(std::span<const char>(name, std::strlen(name)));
 }
