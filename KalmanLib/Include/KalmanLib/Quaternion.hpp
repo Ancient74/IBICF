@@ -99,8 +99,7 @@ public:
 
     Attitude ToAttitude() const
     {
-        const T w = m_scalar, x = m_vector(1,0), y = m_vector(2,0), z = m_vector(3,0);
-
+        const T w = m_scalar, x = m_vector(0,0), y = m_vector(1,0), z = m_vector(2,0);
         const T roll = std::atan2(2.0f * (w*x + y*z), 1.0f - 2.0f * (x*x + y*y));
 
         const T sinPitch = 2.0f * (w*y - z*x);
