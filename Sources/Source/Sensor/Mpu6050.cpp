@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "SensorStatus.h"
 #include "projdefs.h"
+#include "Welford.h"
 
 namespace
 {
@@ -244,8 +245,8 @@ void Mpu6050::Calibrate(Matrix3f& R, Matrix3f& N)
 {
     constexpr uint16_t calibrationSamples = 1000;
 
-    Welford gx, gy, gz;
-    Welford ax, ay, az;
+    Welford<float> gx, gy, gz;
+    Welford<float> ax, ay, az;
 
     for (uint16_t i = 0; i < calibrationSamples; i++)
     {

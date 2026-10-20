@@ -1,5 +1,6 @@
 #include "Qmc5883L.h"
 #include <KalmanLib/Matrix.hpp>
+#include "Welford.h"
 
 namespace
 {
@@ -126,7 +127,7 @@ void Qmc5883L::GetSensorVariance(Matrix3f& R)
 {
     constexpr uint16_t samples = 1000;
 
-    Welford mx, my, mz;
+    Welford<float> mx, my, mz;
 
     for (uint16_t i = 0; i < samples; i++)
     {

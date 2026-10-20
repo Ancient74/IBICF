@@ -73,21 +73,3 @@ private:
     I2cBus& m_bus;
     uint16_t m_address;
 };
-
-struct Welford
-{
-    uint32_t n = 0;
-    float mean = 0.0f;
-    float M2 = 0.0f;
-
-    void Add(float x)
-    {
-        ++n;
-        const float delta = x - mean;
-        mean += delta / static_cast<float>(n);
-        M2 += delta * (x - mean);
-    }
-
-    float Mean() const { return mean; }
-    float Variance() const { return n > 1 ? M2 / static_cast<float>(n - 1) : 0.0f; }
-};
