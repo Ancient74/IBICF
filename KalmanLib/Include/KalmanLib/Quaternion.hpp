@@ -22,16 +22,16 @@ public:
         return { std::cos(half), std::sin(half) * (axis / axisNorm) };
     }
 
-    static Quaternion Identity()
+    static constexpr Quaternion Identity()
     {
         return { static_cast<T>(1), {} };
     }
 
-    Quaternion() : Quaternion(Identity())
+    constexpr Quaternion() : Quaternion(Identity())
     {
     }
 
-    Quaternion operator*(const Quaternion& rhs) const
+    constexpr Quaternion operator*(const Quaternion& rhs) const
     {
         const T scalar = m_scalar * rhs.m_scalar - DotProduct(m_vector, rhs.m_vector);
         const Vector<T, 3> vector = m_scalar * rhs.m_vector
@@ -40,20 +40,20 @@ public:
         return Quaternion(scalar, vector);
     }
 
-    Vector<T, 3> Rotate(const Vector<T, 3>& rotate) const
+    constexpr Vector<T, 3> Rotate(const Vector<T, 3>& rotate) const
     {
         Quaternion fromRotation(static_cast<T>(0), rotate);
         Quaternion conjugate = Conjugate();
         return ((*this)*fromRotation*conjugate).m_vector;
     }
 
-    Vector<T, 3> InverseRotate(const Vector<T, 3>& rotate) const
+    constexpr Vector<T, 3> InverseRotate(const Vector<T, 3>& rotate) const
     {
         Quaternion fromRotation(static_cast<T>(0), rotate);
         return (Conjugate()*fromRotation*(*this)).m_vector;
     }
 
-    Matrix<T, 3, 3> ToRotationMatrix() const
+    constexpr Matrix<T, 3, 3> ToRotationMatrix() const
     {
         const T w = m_scalar;
         const T x = m_vector(0, 0);
@@ -87,7 +87,7 @@ public:
         m_vector = m_vector / norm;
     }
 
-    Vector<T, 4> GetRawValues() const
+    constexpr Vector<T, 4> GetRawValues() const
     {
         Vector<T, 4> raw{};
         raw(0,0) = m_scalar;
@@ -111,9 +111,9 @@ public:
     }
 
 private:
-    Quaternion(T scalar, const Vector<T, 3>& vec) : m_vector(vec), m_scalar(scalar) {}
+    constexpr Quaternion(T scalar, const Vector<T, 3>& vec) : m_vector(vec), m_scalar(scalar) {}
 
-    Quaternion Conjugate() const
+    constexpr Quaternion Conjugate() const
     {
         return { m_scalar, -m_vector };
     }
