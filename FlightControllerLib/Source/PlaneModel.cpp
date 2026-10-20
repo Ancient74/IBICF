@@ -41,3 +41,21 @@ void PlaneModel::Thrust(uint16_t thrust)
 {
     m_thrust.SetThrust(thrust > 100 ? 100 : thrust);
 }
+
+Vector3f PlaneModel::GetUpVector() const
+{
+    Vector3f upVector{};
+    upVector(0, 0) = 0.0f;
+    upVector(1, 0) = 1.0f;
+    upVector(2, 0) = 0.0f;
+    return upVector;
+}
+
+Vector3f PlaneModel::GetRightVector() const
+{
+    Vector3f rightVector{};
+    rightVector(0, 0) = 0.0f;
+    rightVector(1, 0) = 0.0f;
+    rightVector(2, 0) = 1.0f;
+    return rightVector;
+}

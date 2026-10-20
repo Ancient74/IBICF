@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "KalmanLib/Matrix.hpp"
 
 class ISurfaceController
 {
@@ -30,6 +31,9 @@ public:
     void Yaw(int16_t deviation);
 
     void Thrust(uint16_t thrust);
+
+    Vector3f GetUpVector() const;
+    Vector3f GetRightVector() const;
 
 private:
     void UpdateRuddervators();
