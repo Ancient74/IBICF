@@ -22,6 +22,61 @@ public:
         return { std::cos(half), std::sin(half) * (axis / axisNorm) };
     }
 
+    static constexpr Quaternion FromRotationMatrix(const Matrix3f& matrix)
+    {
+        const T m00 = static_cast<T>(matrix(0, 0));
+        const T m11 = static_cast<T>(matrix(1, 1));
+        const T m22 = static_cast<T>(matrix(2, 2));
+        const T trace = m00 + m11 + m22;
+        T scalar;
+        Vector<T, 3> vector{};
+
+        if (trace > static_cast<T>(0))
+        {
+            const T scale = static_cast<T>(2) * SquareRoot(trace + static_cast<T>(1));
+            scalar = scale / static_cast<T>(4);
+            vector(0, 0) = (static_cast<T>(matrix(2, 1)) - static_cast<T>(matrix(1, 2))) / scale;
+            vector(1, 0) = (static_cast<T>(matrix(0, 2)) - static_cast<T>(matrix(2, 0))) / scale;
+            vector(2, 0) = (static_cast<T>(matrix(1, 0)) - static_cast<T>(matrix(0, 1))) / scale;
+        }
+        else if (m00 > m11 && m00 > m22)
+        {
+            const T scale = static_cast<T>(2) * SquareRoot(
+                static_cast<T>(1) + m00 - m11 - m22);
+            scalar = (static_cast<T>(matrix(2, 1)) - static_cast<T>(matrix(1, 2))) / scale;
+            vector(0, 0) = scale / static_cast<T>(4);
+            vector(1, 0) = (static_cast<T>(matrix(0, 1)) + static_cast<T>(matrix(1, 0))) / scale;
+            vector(2, 0) = (static_cast<T>(matrix(0, 2)) + static_cast<T>(matrix(2, 0))) / scale;
+        }
+        else if (m11 > m22)
+        {
+            const T scale = static_cast<T>(2) * SquareRoot(
+                static_cast<T>(1) + m11 - m00 - m22);
+            scalar = (static_cast<T>(matrix(0, 2)) - static_cast<T>(matrix(2, 0))) / scale;
+            vector(0, 0) = (static_cast<T>(matrix(0, 1)) + static_cast<T>(matrix(1, 0))) / scale;
+            vector(1, 0) = scale / static_cast<T>(4);
+            vector(2, 0) = (static_cast<T>(matrix(1, 2)) + static_cast<T>(matrix(2, 1))) / scale;
+        }
+        else
+        {
+            const T scale = static_cast<T>(2) * SquareRoot(
+                static_cast<T>(1) + m22 - m00 - m11);
+            scalar = (static_cast<T>(matrix(1, 0)) - static_cast<T>(matrix(0, 1))) / scale;
+            vector(0, 0) = (static_cast<T>(matrix(0, 2)) + static_cast<T>(matrix(2, 0))) / scale;
+            vector(1, 0) = (static_cast<T>(matrix(1, 2)) + static_cast<T>(matrix(2, 1))) / scale;
+            vector(2, 0) = scale / static_cast<T>(4);
+        }
+
+        return {scalar, vector};
+    }
+
+    static constexpr Quaternion FromTwoVectors(const Vector<T, 3>& a, const Vector<T, 3>& b)
+    {
+        Quaternion q(T(1) + DotProduct(a, b), CrossProduct(a, b));
+        q.Normalize();
+        return q;
+    }
+
     static constexpr Quaternion Identity()
     {
         return { static_cast<T>(1), {} };
@@ -77,9 +132,9 @@ public:
         return R;
     }
 
-    void Normalize()
+    constexpr void Normalize()
     {
-        const T norm = std::sqrt(m_scalar * m_scalar + DotProduct(m_vector, m_vector));
+        const T norm = SquareRoot(m_scalar * m_scalar + DotProduct(m_vector, m_vector));
         if (norm == static_cast<T>(0))
             return;
 

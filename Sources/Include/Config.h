@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <KalmanLib/Matrix.hpp>
+#include <KalmanLib/Quaternion.hpp>
 
 namespace Config
 {
@@ -110,6 +111,49 @@ namespace Config
         vector(2, 0) = 1.0f;
         return vector;
     }();
+
+    constexpr Vector3f IMU_WORLD_UP_VECTOR = []
+    {
+        Vector3f vector{};
+        vector(2, 0) = 1.0f;
+        return vector;
+    }();
+
+    // These vectors are obtained by performing calibration using AccelerometerToBodyCalibrationNode
+    constexpr Vector3f IMU_TO_BODY_UP_VECTOR = []
+    {
+        Vector3f vector{};
+        vector(2, 0) = 1.0f;
+        return vector;
+    }();
+    constexpr Vector3f IMU_TO_BODY_RIGHT_VECTOR = []
+    {
+        Vector3f vector{};
+        vector(0, 0) = 1.0f;
+        return vector;
+    }();
+    static_assert(NormSquared(IMU_TO_BODY_UP_VECTOR) == 1.0f);
+    static_assert(NormSquared(IMU_TO_BODY_RIGHT_VECTOR) == 1.0f);
+
+    constexpr Vector3f IMU_TO_BODY_FORWARD_VECTOR = CrossProduct(IMU_TO_BODY_UP_VECTOR, IMU_TO_BODY_RIGHT_VECTOR);
+    static_assert(NormSquared(IMU_TO_BODY_FORWARD_VECTOR) == 1.0f);
+
+    constexpr Matrix3f BODY_TO_IMU_BODY_ROTATION_MATRIX = []
+    {
+        Matrix3f matrix{};
+        matrix(0, 0) = IMU_TO_BODY_FORWARD_VECTOR(0, 0);
+        matrix(1, 0) = IMU_TO_BODY_FORWARD_VECTOR(1, 0);
+        matrix(2, 0) = IMU_TO_BODY_FORWARD_VECTOR(2, 0);
+        matrix(0, 1) = IMU_TO_BODY_UP_VECTOR(0, 0);
+        matrix(1, 1) = IMU_TO_BODY_UP_VECTOR(1, 0);
+        matrix(2, 1) = IMU_TO_BODY_UP_VECTOR(2, 0);
+        matrix(0, 2) = IMU_TO_BODY_RIGHT_VECTOR(0, 0);
+        matrix(1, 2) = IMU_TO_BODY_RIGHT_VECTOR(1, 0);
+        matrix(2, 2) = IMU_TO_BODY_RIGHT_VECTOR(2, 0);
+        return matrix;
+    }();
+    constexpr Quaternion<float> BODY_TO_IMU_BODY_QUATERNION = Quaternion<float>::FromRotationMatrix(BODY_TO_IMU_BODY_ROTATION_MATRIX);
+    constexpr Quaternion<float> IMU_WORLD_FIX_QUATERNION  = Quaternion<float>::FromTwoVectors(IMU_WORLD_UP_VECTOR, WORLD_UP_VECTOR);
 
     namespace Task
     {

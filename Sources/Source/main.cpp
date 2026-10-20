@@ -31,6 +31,7 @@
 #include "VtxControllerNode.h"
 #include "TaskDelegate.h"
 #include "AccelerometerToBodyCalibrationNode.h"
+#include "RotationTransformNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -119,10 +120,12 @@ extern "C" void main_cpp()
     }
     else
         LogInfo(MODULE, "Magnetometer correction is disabled");
-    static SensorFusionNode<3> fusion{"Fusion"};
+    static SensorFusionNode<2> fusion{"Fusion"};
+    static RotationTransformNode<2> accelToBodyTransformNode{Config::IMU_WORLD_FIX_QUATERNION, Config::BODY_TO_IMU_BODY_QUATERNION};
     fusion.SetAccelerometerVariance(accelR);
     fusion.SetMagnetometerVariance(magnetR);
     fusion.SetGyroscopeVariance(N);
+    Connect(fusion, accelToBodyTransformNode);
 
     if (useQmc)
     {
@@ -168,7 +171,7 @@ extern "C" void main_cpp()
     static CruiseFlightMode highPosFlightMode{"CruiseFlightMode"};
     static FailsafeFlightMode failsafeFlightMode{"FailSafeMode"};
 
-    Connect(fusion, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(highPosFlightMode));
+    Connect(accelToBodyTransformNode, static_cast<NodeInput<CruiseFlightMode, Quaternion<float>>&>(highPosFlightMode));
 
     if (useBme)
     {
@@ -178,7 +181,7 @@ extern "C" void main_cpp()
         Connect(altitudeNode, static_cast<NodeInput<CruiseFlightMode, float>&>(highPosFlightMode));
     }
 
-    Connect(fusion, static_cast<NodeInput<OsdLayout, Quaternion<float>>&>(osdLayout));
+    Connect(accelToBodyTransformNode, static_cast<NodeInput<OsdLayout, Quaternion<float>>&>(osdLayout));
     Connect(batterySensor, static_cast<NodeInput<OsdLayout, BatteryInfo>&>(osdLayout));
     Connect(thrust, static_cast<NodeInput<OsdLayout, uint8_t>&>(osdLayout));
     thrust.PublishCurrentThrust();
