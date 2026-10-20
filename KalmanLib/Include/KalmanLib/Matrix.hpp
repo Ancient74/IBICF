@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cmath>
+#include "SquareRoot.hpp"
 
 template<typename T, size_t Rows, size_t Cols>
 class Matrix;
@@ -344,13 +345,13 @@ constexpr T NormSquared(const Vector<T, N>& a)
 }
 
 template<typename T, size_t N>
-T Norm(const Vector<T, N>& a)
+constexpr T Norm(const Vector<T, N>& a)
 {
-    return std::sqrt(NormSquared(a));
+    return SquareRoot(NormSquared(a));
 }
 
 template<typename T, size_t N>
-Vector<T, N> Normalize(const Vector<T, N>& a)
+constexpr Vector<T, N> Normalize(const Vector<T, N>& a)
 {
     return a * (static_cast<T>(1) / Norm(a));
 }
