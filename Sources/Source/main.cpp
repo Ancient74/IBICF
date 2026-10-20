@@ -86,13 +86,12 @@ extern "C" void main_cpp()
     Matrix3f accelR{};
     Matrix3f magnetR{};
     Matrix3f N{};
-    auto samplingRate = mpuSensor.GetSamplingRate();
 
     if (mpuStatus == Status::Ok)
     {
         LogInfo(MODULE, "IMU calibration in progress");
         mpuSensor.Calibrate(accelR, N);
-        LogInfo(MODULE, "IMU calibration complete; sampling rate=%u Hz", static_cast<unsigned>(samplingRate));
+        LogInfo(MODULE, "IMU calibration complete");
     }
     else
     {
@@ -119,7 +118,7 @@ extern "C" void main_cpp()
     }
     else
         LogInfo(MODULE, "Magnetometer correction is disabled");
-    static SensorFusionNode<2> fusion{"Fusion", 1.0f / samplingRate, accelR, magnetR, N};
+    static SensorFusionNode<2> fusion{"Fusion", accelR, magnetR, N};
 
     if (useQmc)
     {

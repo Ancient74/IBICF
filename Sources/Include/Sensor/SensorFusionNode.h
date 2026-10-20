@@ -93,9 +93,9 @@ public:
 
     using OutputType = Quaternion<float>;
 
-    SensorFusionNode(const char* taskName, float nominalDt, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
+    SensorFusionNode(const char* taskName, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
         : m_thread(taskName, *this)
-        , m_core(accelR, magnetR, N), m_nominalDt(nominalDt)
+        , m_core(accelR, magnetR, N)
     {
         m_sampleQueue = xQueueCreateStatic(Config::SENSOR_FUSION_NODE_QUEUE_SIZE, sizeof(FusionSample), m_sampleQueueStorage, &m_sampleQueueBuffer);
         configASSERT(m_sampleQueue != nullptr);
@@ -130,15 +130,15 @@ public:
         }
 
         const TickType_t now = xTaskGetTickCount();
-        float dt = m_nominalDt;
-        if (m_hasLastTick)
+        if (!m_hasLastTick)
         {
-            dt = (now - m_lastTick) * static_cast<float>(portTICK_PERIOD_MS) / 1000.0f;
-            if (dt <= 0.0f) dt = m_nominalDt;
+            m_hasLastTick = true;
+            m_lastTick = now;
+            return;
         }
-        m_lastTick = now;
-        m_hasLastTick = true;
+        float dt = (now - m_lastTick) * static_cast<float>(portTICK_PERIOD_MS) / 1000.0f;
 
+        m_lastTick = now;
         const bool hasMag = m_latestMag.has_value();
         const Magnetometer mag = hasMag ? *m_latestMag : Magnetometer{};
         const auto quat = m_core.Step(item.imu, hasMag, mag, dt);
@@ -177,5 +177,4 @@ private:
     std::optional<Magnetometer> m_latestMag{};
 
     FusionCore m_core;
-    float m_nominalDt;
 };
