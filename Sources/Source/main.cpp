@@ -30,6 +30,7 @@
 #include "CrsfFrameProcessorNode.h"
 #include "VtxControllerNode.h"
 #include "TaskDelegate.h"
+#include "AccelerometerToBodyCalibrationNode.h"
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -118,7 +119,7 @@ extern "C" void main_cpp()
     }
     else
         LogInfo(MODULE, "Magnetometer correction is disabled");
-    static SensorFusionNode<2> fusion{"Fusion"};
+    static SensorFusionNode<3> fusion{"Fusion"};
     fusion.SetAccelerometerVariance(accelR);
     fusion.SetMagnetometerVariance(magnetR);
     fusion.SetGyroscopeVariance(N);
@@ -195,8 +196,6 @@ extern "C" void main_cpp()
 
     Connect(trampProtocolController.GetVtxInfoNode(), static_cast<NodeInput<OsdLayout, VtxInfo>&>(osdLayout));
 
-    fusion.Start();
-    LogInfo(MODULE, "Sensor fusion started");
     batterySensor.Start();
     LogInfo(MODULE, "Battery sensor started");
 
@@ -223,6 +222,16 @@ extern "C" void main_cpp()
             static_cast<NodeInput<OsdLayout, CrsfLib::LinkStatisticsFrame>&>(osdLayout));
     Connect(planeControllerNode, static_cast<NodeInput<OsdLayout, std::span<const char>>&>(osdLayout));
     planeControllerNode.PublishFlightModeName();
+
+    if constexpr (Config::ENABLE_CALIBRATION)
+    {
+        static AccelerometerToBodyCalibrationNode accelToBodyCalibrationNode{"AccelToBodyCal", model.GetUpVector(), model.GetRightVector()};
+        Connect(crsfFrameProcessor.GetCalibrationNode(), static_cast<NodeInput<AccelerometerToBodyCalibrationNode, bool>&>(accelToBodyCalibrationNode));
+        Connect(fusion, static_cast<NodeInput<AccelerometerToBodyCalibrationNode, Quaternion<float>>&>(accelToBodyCalibrationNode));
+    }
+    fusion.Start();
+    LogInfo(MODULE, "Sensor fusion started");
+
     crsfFrameReader.Start();
     LogInfo(MODULE, "CRSF receiver started");
 

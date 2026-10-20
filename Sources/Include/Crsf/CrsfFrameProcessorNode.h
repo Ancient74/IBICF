@@ -63,6 +63,10 @@ public:
             packet.vtxMode = m_vtxSwitch.Update(packetFrame);
             packet.flightMode = m_flightModeSwitch.Update(packetFrame);
             m_rcPacketNode.Publish(packet);
+            if constexpr (Config::ENABLE_CALIBRATION)
+            {
+                m_calibrationNode.Publish(m_calibrationSwitch.Update(packetFrame));
+            }
             break;
         }
         default:
@@ -85,12 +89,19 @@ public:
         return m_linkInfo;
     }
 
+    auto& GetCalibrationNode()
+    {
+        return m_calibrationNode;
+    }
+
 private:
     DoubleSwitch<Channel<4>> m_armSwitch{};
     TriSwitch<Channel<5>> m_vtxSwitch{};
     TriSwitch<Channel<6>> m_flightModeSwitch{};
+    DoubleSwitch<Channel<7>> m_calibrationSwitch{};
 
     CrsfOutNode<RcPacket, MaxSubs> m_rcPacketNode;
     CrsfOutNode<std::span<const uint8_t>, MaxSubs> m_deviceInfoNode;
     CrsfOutNode<CrsfLib::LinkStatisticsFrame, MaxSubs> m_linkInfo;
+    CrsfOutNode<bool, MaxSubs> m_calibrationNode;
 };
