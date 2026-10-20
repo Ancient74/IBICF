@@ -1,6 +1,7 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "task.h"
+#include <KalmanLib/Matrix.hpp>
 
 namespace Config
 {
@@ -96,6 +97,19 @@ namespace Config
     constexpr uint16_t LOGGER_QUEUE_TIMEOUT_MS = 200;
     constexpr uint16_t LOGGER_BUSY_RETRY_INTERVAL_MS = 10;
     constexpr uint16_t LOGGER_BUSY_RETRY_ATTEMPTS = 10;
+
+    constexpr Vector3f WORLD_UP_VECTOR = []
+    {
+        Vector3f vector{};
+        vector(1, 0) = 1.0f;
+        return vector;
+    }();
+    constexpr Vector3f WORLD_RIGHT_VECTOR = []
+    {
+        Vector3f vector{};
+        vector(2, 0) = 1.0f;
+        return vector;
+    }();
 
     namespace Task
     {

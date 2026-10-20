@@ -10,4 +10,4 @@ target_include_directories(FlightControllerLib
 )
 
 target_compile_features(FlightControllerLib PUBLIC cxx_std_20)
-target_link_libraries(FlightControllerLib PUBLIC PubSubLib KalmanLib)
+target_link_libraries(PubSubLib)

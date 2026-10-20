@@ -225,7 +225,7 @@ extern "C" void main_cpp()
 
     if constexpr (Config::ENABLE_CALIBRATION)
     {
-        static AccelerometerToBodyCalibrationNode accelToBodyCalibrationNode{"AccelToBodyCal", model.GetUpVector(), model.GetRightVector()};
+        static AccelerometerToBodyCalibrationNode accelToBodyCalibrationNode{"AccelToBodyCal", Config::WORLD_UP_VECTOR, Config::WORLD_RIGHT_VECTOR};
         Connect(crsfFrameProcessor.GetCalibrationNode(), static_cast<NodeInput<AccelerometerToBodyCalibrationNode, bool>&>(accelToBodyCalibrationNode));
         Connect(fusion, static_cast<NodeInput<AccelerometerToBodyCalibrationNode, Quaternion<float>>&>(accelToBodyCalibrationNode));
     }
