@@ -120,7 +120,7 @@ public:
     void RunTaskIteration()
     {
         FusionSample item{};
-        if (xQueueReceive(m_sampleQueue, &item, pdMS_TO_TICKS(200)) != pdTRUE)
+        if (xQueueReceive(m_sampleQueue, &item, pdMS_TO_TICKS(Config::SENSOR_FUSION_NODE_TIMEOUT_MS)) != pdTRUE)
             return;
 
         if (item.source == FusionSample::Source::Mag)
