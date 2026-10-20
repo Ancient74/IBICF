@@ -31,14 +31,26 @@ namespace
 class FusionCore
 {
 public:
-    FusionCore(const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
+    FusionCore()
         : m_kalmanFilter(
               Vector3f{[](){ Vector3f v{}; v(2, 0) = 1.0f; return v; }()},
-              Vector3f{[](){ Vector3f v{}; v(0,0) = 0.434f; v(1,0) = 0.061f; v(2,0) = 0.899f; return v; }()},
-              accelR,
-              magnetR,
-              N)
+              Vector3f{[](){ Vector3f v{}; v(0,0) = 0.434f; v(1,0) = 0.061f; v(2,0) = 0.899f; return v; }()})
     {
+    }
+
+    void SetAccelerometerVariance(const Matrix3f& accelR)
+    {
+        m_kalmanFilter.SetAccelerometerVariance(accelR);
+    }
+
+    void SetMagnetometerVariance(const Matrix3f& magnetR)
+    {
+        m_kalmanFilter.SetMagnetometerVariance(magnetR);
+    }
+
+    void SetGyroscopeVariance(const Matrix3f& N)
+    {
+        m_kalmanFilter.SetGyroscopeVariance(N);
     }
 
     Quaternion<float> Step(const GyroscopeAccelerometer& imu, bool hasMag, const Magnetometer& mag, float dt)
@@ -93,9 +105,23 @@ public:
 
     using OutputType = Quaternion<float>;
 
-    SensorFusionNode(const char* taskName, const Matrix3f& accelR, const Matrix3f& magnetR, const Matrix3f& N)
+    void SetAccelerometerVariance(const Matrix3f& accelR)
+    {
+        m_core.SetAccelerometerVariance(accelR);
+    }
+
+    void SetMagnetometerVariance(const Matrix3f& magnetR)
+    {
+        m_core.SetMagnetometerVariance(magnetR);
+    }
+
+    void SetGyroscopeVariance(const Matrix3f& N)
+    {
+        m_core.SetGyroscopeVariance(N);
+    }
+
+    SensorFusionNode(const char* taskName)
         : m_thread(taskName, *this)
-        , m_core(accelR, magnetR, N)
     {
         m_sampleQueue = xQueueCreateStatic(Config::SENSOR_FUSION_NODE_QUEUE_SIZE, sizeof(FusionSample), m_sampleQueueStorage, &m_sampleQueueBuffer);
         configASSERT(m_sampleQueue != nullptr);

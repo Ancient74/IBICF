@@ -7,19 +7,22 @@ class MultiplicativeExtendedKalmanFilter
 public:
     MultiplicativeExtendedKalmanFilter(
         const Vector3f& gravityDirection,
-        const Vector3f& magReference,
-        const Matrix3f& accelR,
-        const Matrix3f& magnetR,
-        const Matrix3f& N)
+        const Vector3f& magReference)
         : m_gravityDirection(gravityDirection)
-        , m_accelR(accelR)
-        , m_N(N)
     {
         // Remove vertical component from magReference. Keep only heading
         m_magReference = magReference - m_gravityDirection * DotProduct(magReference, m_gravityDirection);
 
         m_horizontalAxis = CrossProduct(m_gravityDirection, m_magReference);
+    }
 
+    void SetAccelerometerVariance(const Matrix3f& accelR)
+    {
+        m_accelR = accelR;
+    }
+
+    void SetMagnetometerVariance(const Matrix3f& magnetR)
+    {
         // To project covariance onto such axis we do
         // σ²(a) = (aᵀ M a) / (aᵀ a)
         const auto coeff = (m_horizontalAxis.Transpose() * m_horizontalAxis)(0,0);
@@ -28,6 +31,11 @@ public:
 
         // we need to convert it to rad^2
         m_magR = variance / NormSquared(m_magReference);
+    }
+
+    void SetGyroscopeVariance(const Matrix3f& N)
+    {
+        m_N = N;
     }
 
     Quaternion<float> Step(const Vector3f& gyro, const Vector3f& accel, const Vector3f& magnet, float dt, bool useMagnetometer = true)

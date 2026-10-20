@@ -118,7 +118,10 @@ extern "C" void main_cpp()
     }
     else
         LogInfo(MODULE, "Magnetometer correction is disabled");
-    static SensorFusionNode<2> fusion{"Fusion", accelR, magnetR, N};
+    static SensorFusionNode<2> fusion{"Fusion"};
+    fusion.SetAccelerometerVariance(accelR);
+    fusion.SetMagnetometerVariance(magnetR);
+    fusion.SetGyroscopeVariance(N);
 
     if (useQmc)
     {
