@@ -8,16 +8,16 @@ template<typename T, size_t Rows, size_t Cols>
 class Matrix;
 
 template<typename T, size_t N>
-Matrix<T, N, N> Inverse(const Matrix<T, N, N>&);
+constexpr Matrix<T, N, N> Inverse(const Matrix<T, N, N>&);
 
 template<typename T>
-Matrix<T, 1, 1> Inverse(const Matrix<T, 1, 1>&);
+constexpr Matrix<T, 1, 1> Inverse(const Matrix<T, 1, 1>&);
 
 template<typename T>
-Matrix<T, 2, 2> Inverse(const Matrix<T, 2, 2>&);
+constexpr Matrix<T, 2, 2> Inverse(const Matrix<T, 2, 2>&);
 
 template<typename T>
-Matrix<T, 3, 3> Inverse(const Matrix<T, 3, 3>&);
+constexpr Matrix<T, 3, 3> Inverse(const Matrix<T, 3, 3>&);
 
 template<typename T, size_t Rows, size_t Cols>
 class Matrix
@@ -25,7 +25,7 @@ class Matrix
 public:
     constexpr Matrix() = default;
 
-    static Matrix Identity()
+    static constexpr Matrix Identity()
     {
         static_assert(Rows == Cols);
 
@@ -37,17 +37,17 @@ public:
         return result;
     }
 
-    T& operator()(size_t row, size_t col)
+    constexpr T& operator()(size_t row, size_t col)
     {
         return m_buffer[row][col];
     }
 
-    const T& operator()(size_t row, size_t col) const
+    constexpr const T& operator()(size_t row, size_t col) const
     {
         return m_buffer[row][col];
     }
 
-    Matrix operator+(const Matrix& other) const
+    constexpr Matrix operator+(const Matrix& other) const
     {
         Matrix result;
 
@@ -58,7 +58,7 @@ public:
         return result;
     }
 
-    Matrix operator+(T scalar) const
+    constexpr Matrix operator+(T scalar) const
     {
         Matrix result;
 
@@ -69,7 +69,7 @@ public:
         return result;
     }
 
-    Matrix operator-(T scalar) const
+    constexpr Matrix operator-(T scalar) const
     {
         Matrix result;
 
@@ -80,7 +80,7 @@ public:
         return result;
     }
 
-    Matrix& operator+=(const Matrix& other)
+    constexpr Matrix& operator+=(const Matrix& other)
     {
         for(size_t r = 0; r < Rows; ++r)
             for(size_t c = 0; c < Cols; ++c)
@@ -89,7 +89,7 @@ public:
         return *this;
     }
 
-    Matrix operator-(const Matrix& other) const
+    constexpr Matrix operator-(const Matrix& other) const
     {
         Matrix result;
 
@@ -100,7 +100,7 @@ public:
         return result;
     }
 
-    Matrix& operator-=(const Matrix& other)
+    constexpr Matrix& operator-=(const Matrix& other)
     {
         for(size_t r = 0; r < Rows; ++r)
             for(size_t c = 0; c < Cols; ++c)
@@ -109,7 +109,7 @@ public:
         return *this;
     }
 
-    Matrix operator-() const
+    constexpr Matrix operator-() const
     {
         Matrix result;
 
@@ -120,7 +120,7 @@ public:
         return result;
     }
 
-    Matrix operator*(T scalar) const
+    constexpr Matrix operator*(T scalar) const
     {
         Matrix result;
 
@@ -131,7 +131,7 @@ public:
         return result;
     }
 
-    Matrix operator/(T scalar) const
+    constexpr Matrix operator/(T scalar) const
     {
         Matrix result;
 
@@ -142,7 +142,7 @@ public:
         return result;
     }
 
-    Matrix& operator*=(T scalar)
+    constexpr Matrix& operator*=(T scalar)
     {
         for(size_t r = 0; r < Rows; ++r)
             for(size_t c = 0; c < Cols; ++c)
@@ -151,12 +151,12 @@ public:
         return *this;
     }
 
-    friend Matrix operator*(T scalar, const Matrix& matrix)
+    friend constexpr Matrix operator*(T scalar, const Matrix& matrix)
     {
         return matrix * scalar;
     }
 
-    Matrix<T, Cols, Rows> Transpose() const
+    constexpr Matrix<T, Cols, Rows> Transpose() const
     {
         Matrix<T, Cols, Rows> result;
 
@@ -167,7 +167,7 @@ public:
         return result;
     }
 
-    auto Inverse() const
+    constexpr auto Inverse() const
     {
         return ::Inverse(*this);
     }
@@ -180,7 +180,7 @@ template<typename T,
          size_t Rows,
          size_t Inner,
          size_t Cols>
-Matrix<T, Rows, Cols>
+constexpr Matrix<T, Rows, Cols>
 operator*(const Matrix<T, Rows, Inner>& a,
           const Matrix<T, Inner, Cols>& b)
 {
@@ -203,7 +203,7 @@ operator*(const Matrix<T, Rows, Inner>& a,
 }
 
 template<typename T, size_t N>
-Matrix<T, N, N> Inverse(const Matrix<T, N, N>& matrix)
+constexpr Matrix<T, N, N> Inverse(const Matrix<T, N, N>& matrix)
 {
     Matrix<T, N, N> A = matrix;
     Matrix<T, N, N> I = Matrix<T, N, N>::Identity();
@@ -241,7 +241,7 @@ Matrix<T, N, N> Inverse(const Matrix<T, N, N>& matrix)
 }
 
 template<typename T>
-Matrix<T, 1, 1> Inverse(const Matrix<T, 1, 1>& m)
+constexpr Matrix<T, 1, 1> Inverse(const Matrix<T, 1, 1>& m)
 {
     Matrix<T, 1, 1> result;
 
@@ -253,7 +253,7 @@ Matrix<T, 1, 1> Inverse(const Matrix<T, 1, 1>& m)
 }
 
 template<typename T>
-Matrix<T, 2, 2> Inverse(const Matrix<T, 2, 2>& m)
+constexpr Matrix<T, 2, 2> Inverse(const Matrix<T, 2, 2>& m)
 {
     const T a = m(0,0);
     const T b = m(0,1);
@@ -277,7 +277,7 @@ Matrix<T, 2, 2> Inverse(const Matrix<T, 2, 2>& m)
 }
 
 template<typename T>
-Matrix<T, 3, 3> Inverse(const Matrix<T, 3, 3>& m)
+constexpr Matrix<T, 3, 3> Inverse(const Matrix<T, 3, 3>& m)
 {
     const T a = m(0,0);
     const T b = m(0,1);
@@ -329,7 +329,7 @@ using Matrix3f = Matrix<float, 3, 3>;
 using Matrix4f = Matrix<float, 4, 4>;
 
 template<typename T, size_t N>
-T DotProduct(const Vector<T, N>& a, const Vector<T, N>& b)
+constexpr T DotProduct(const Vector<T, N>& a, const Vector<T, N>& b)
 {
     T result{};
     for (size_t i = 0; i < N; i++)
@@ -338,7 +338,7 @@ T DotProduct(const Vector<T, N>& a, const Vector<T, N>& b)
 }
 
 template<typename T, size_t N>
-T NormSquared(const Vector<T, N>& a)
+constexpr T NormSquared(const Vector<T, N>& a)
 {
     return DotProduct(a, a);
 }
@@ -356,8 +356,8 @@ Vector<T, N> Normalize(const Vector<T, N>& a)
 }
 
 template<typename T>
-Vector<T, 3> CrossProduct(const Vector<T, 3>& a,
-                          const Vector<T, 3>& b)
+constexpr Vector<T, 3> CrossProduct(const Vector<T, 3>& a,
+                                    const Vector<T, 3>& b)
 {
     Vector<T, 3> result{};
 
