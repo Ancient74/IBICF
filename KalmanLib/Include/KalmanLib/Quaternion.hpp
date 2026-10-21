@@ -1,5 +1,6 @@
 #pragma once
 #include "Matrix.hpp"
+#include <algorithm>
 #include <cmath>
 
 struct Attitude
@@ -152,16 +153,13 @@ public:
         return raw;
     }
 
-    Attitude ToAttitude() const
+    Attitude ToAttitude(const Vector<T, 3>& worldUp) const
     {
-        const T w = m_scalar, x = m_vector(0,0), y = m_vector(1,0), z = m_vector(2,0);
-        const T roll = std::atan2(2.0f * (w*x + y*z), 1.0f - 2.0f * (x*x + y*y));
+        // world up written in body axes
+        const Vector<T, 3> u = InverseRotate(worldUp);
 
-        const T sinPitch = 2.0f * (w*y - z*x);
-        const T pitch = std::abs(sinPitch) >= 1.0f
-            ? std::copysign(static_cast<T>(M_PI) / 2.0f, sinPitch)
-            : std::asin(sinPitch);
-
+        const T roll = std::atan2(-u(2, 0), u(1, 0)); // right side down positive
+        const T pitch = std::asin(std::clamp(u(0, 0), T(-1), T(1))); // nose up positive
         return {roll, pitch};
     }
 

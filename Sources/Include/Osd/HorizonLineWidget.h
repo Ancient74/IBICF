@@ -16,13 +16,13 @@ public:
     static constexpr std::size_t VisibleRows = Config::OSD_ROWS - 4;
 
     explicit HorizonLineWidget(const Quaternion<float>& orientation)
-        : Base(orientation.ToAttitude())
+        : Base(orientation.ToAttitude(Config::WORLD_UP_VECTOR))
     {
     }
 
     void Set(const Quaternion<float>& orientation)
     {
-        Base::Set(orientation.ToAttitude());
+        Base::Set(orientation.ToAttitude(Config::WORLD_UP_VECTOR));
     }
 
     Content RenderContent(const Attitude& data) const

@@ -44,7 +44,7 @@ const char* FailsafeFlightMode::GetName() const
 
 void FailsafeFlightMode::Process(const Quaternion<float>& quat)
 {
-    const auto attitude = quat.ToAttitude();
+    const auto attitude = quat.ToAttitude(Config::WORLD_UP_VECTOR);
     m_currentRollRad.store(attitude.rollRad);
     m_currentPitchRad.store(attitude.pitchRad);
 }
