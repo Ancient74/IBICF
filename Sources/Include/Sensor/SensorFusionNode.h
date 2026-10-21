@@ -33,7 +33,7 @@ class FusionCore
 public:
     FusionCore()
         : m_kalmanFilter(
-              Vector3f{[](){ Vector3f v{}; v(2, 0) = 1.0f; return v; }()},
+              Config::IMU_WORLD_UP_VECTOR,
               Vector3f{[](){ Vector3f v{}; v(0,0) = 0.434f; v(1,0) = 0.061f; v(2,0) = 0.899f; return v; }()})
     {
     }
