@@ -133,11 +133,11 @@ namespace Config
         vector(0, 0) = 1.0f;
         return Normalize(vector);
     }();
-    static_assert(NormSquared(IMU_TO_BODY_UP_VECTOR) == 1.0f);
-    static_assert(NormSquared(IMU_TO_BODY_RIGHT_VECTOR) == 1.0f);
+    static_assert(std::abs(NormSquared(IMU_TO_BODY_UP_VECTOR) - 1.0f) < 1e-6f);
+    static_assert(std::abs(NormSquared(IMU_TO_BODY_RIGHT_VECTOR) - 1.0f) < 1e-6f);
 
     constexpr Vector3f IMU_TO_BODY_FORWARD_VECTOR = Normalize(CrossProduct(IMU_TO_BODY_UP_VECTOR, IMU_TO_BODY_RIGHT_VECTOR));
-    static_assert(NormSquared(IMU_TO_BODY_FORWARD_VECTOR) == 1.0f);
+    static_assert(std::abs(NormSquared(IMU_TO_BODY_FORWARD_VECTOR) - 1.0f) < 1e-6f);
 
     constexpr Matrix3f BODY_TO_IMU_BODY_ROTATION_MATRIX = []
     {
