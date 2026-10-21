@@ -125,18 +125,18 @@ namespace Config
     {
         Vector3f vector{};
         vector(2, 0) = 1.0f;
-        return vector;
+        return Normalize(vector);
     }();
     constexpr Vector3f IMU_TO_BODY_RIGHT_VECTOR = []
     {
         Vector3f vector{};
         vector(0, 0) = 1.0f;
-        return vector;
+        return Normalize(vector);
     }();
     static_assert(NormSquared(IMU_TO_BODY_UP_VECTOR) == 1.0f);
     static_assert(NormSquared(IMU_TO_BODY_RIGHT_VECTOR) == 1.0f);
 
-    constexpr Vector3f IMU_TO_BODY_FORWARD_VECTOR = CrossProduct(IMU_TO_BODY_UP_VECTOR, IMU_TO_BODY_RIGHT_VECTOR);
+    constexpr Vector3f IMU_TO_BODY_FORWARD_VECTOR = Normalize(CrossProduct(IMU_TO_BODY_UP_VECTOR, IMU_TO_BODY_RIGHT_VECTOR));
     static_assert(NormSquared(IMU_TO_BODY_FORWARD_VECTOR) == 1.0f);
 
     constexpr Matrix3f BODY_TO_IMU_BODY_ROTATION_MATRIX = []
