@@ -23,7 +23,8 @@ namespace Config
     constexpr float BATTERY_VREF_CALIBRATION_MAX_VALUE = 4095.0f;
     constexpr float BATTERY_MAX_VOLTAGE = 25.2f;
     constexpr float BATTERY_MIN_VOLTAGE = 22.2f;
-    constexpr float BATTERY_ADC_DIVIDER_RATIO = (75000.0f + 10000.0f) / 10000.0f;
+    constexpr float BATTERY_DIVIDER_ERROR_COMPENSATION_RATIO = 1.04f;
+    constexpr float BATTERY_ADC_DIVIDER_RATIO = ((75000.0f + 10000.0f) / 10000.0f) * BATTERY_DIVIDER_ERROR_COMPENSATION_RATIO;
     constexpr uint32_t BATTERY_SAMPLING_RATE_HZ = 20;
 
     constexpr uint16_t UART_RX_BUFFER_SIZE = 256;
