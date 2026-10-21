@@ -67,8 +67,9 @@ public:
             vector(1, 0) = (static_cast<T>(matrix(1, 2)) + static_cast<T>(matrix(2, 1))) / scale;
             vector(2, 0) = scale / static_cast<T>(4);
         }
-
-        return {scalar, vector};
+        Quaternion q(scalar, vector);
+        q.Normalize();
+        return q;
     }
 
     static constexpr Quaternion FromTwoVectors(const Vector<T, 3>& a, const Vector<T, 3>& b)
